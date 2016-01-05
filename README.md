@@ -50,11 +50,11 @@ The server is backed by elasticsearch, and creates local indexes of the Human Ph
 1. Try it out:
 
     ```bash
-    $ curl -XPOST -d '{"patient":{ \
-      "id":"1", \
-      "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"}, \
-      "features":[{"id":"HP:0000522"}], \
-      "genomicFeatures":[{"gene":{"id":"NGLY1"}}] \
+    $ curl -XPOST -d '{"patient":{
+        "id":"1",
+        "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"},
+        "features":[{"id":"HP:0000522"}],
+        "genomicFeatures":[{"gene":{"id":"NGLY1"}}]
       }}' localhost:8000/match
     ```
 
