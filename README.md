@@ -5,44 +5,48 @@ The server is backed by elasticsearch, and creates local indexes of the Human Ph
 
 ## Dependencies
 - Python 3.X (not yet tested on 2.7 but should be easy to get working)
-- elasticsearch 2.X
-
 
 ## Quickstart
 
 1. Start up a local elasticsearch cluster, for example:
 
     ```bash
-    $ wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.1.1/elasticsearch-2.1.1.tar.gz
-    $ tar -xzf elasticsearch-2.1.1.tar.gz
-    $ cd elasticsearch-2.1.1/
-    $ ./bin/elasticsearch
+    wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.1.1/elasticsearch-2.1.1.tar.gz
+    tar -xzf elasticsearch-2.1.1.tar.gz
+    cd elasticsearch-2.1.1/
+    # Start up elasticsearch endpoint
+    ./bin/elasticsearch
     ```
 
 1. Set up your Python virtual environment and install necessary Python packages, for example:
 
     ```bash
-    $ virtualenv -p python3 --prompt="(mme-server)" .virtualenv
-    $ source .virtualenv/bin/activate
-    $ pip install -r requirements.txt
+    # Clone repository
+    git clone https://github.com/MatchmakerExchange/reference-server.git
+    cd reference-server
+    # Set up virtual environment
+    virtualenv -p python3 --prompt="(mme-server)" .virtualenv
+    source .virtualenv/bin/activate
+    # Install dependencies
+    pip install -r requirements.txt
     ```
 
 1. Download and index vocabularies and sample data:
 
     ```bash
-    $ python datastore.py
+    python datastore.py
     ```
 
 1. Run tests:
 
     ```bash
-    $ python test.py
+    python test.py
     ```
 
 1. Start up MME reference server:
 
     ```bash
-    $ python server.py
+    python server.py
     ```
 
     By default, the server listens globally (`--host 0.0.0.0`) on port 8000 (`--port 8000`).
@@ -50,7 +54,7 @@ The server is backed by elasticsearch, and creates local indexes of the Human Ph
 1. Try it out:
 
     ```bash
-    $ curl -XPOST -d '{"patient":{
+    curl -XPOST -d '{"patient":{
         "id":"1",
         "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"},
         "features":[{"id":"HP:0000522"}],
