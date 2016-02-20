@@ -70,7 +70,7 @@ class OBOParser(BaseParser):
 class TSVParser(BaseParser):
     def _documents(self, columns):
         with open(self._filename) as ifp:
-            reader = DictReader(ifp, delimiter='\t')
+            reader = DictReader(ifp, delimiter=str('\t'))
             for row in reader:
                 term = defaultdict(list)
                 for column in columns:

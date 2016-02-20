@@ -4,7 +4,7 @@ A simple illustrative reference server for the Matchmaker Exchange API.
 The server is backed by elasticsearch, and creates local indexes of the Human Phenotype Ontology, Ensembl-Entrez-HGNC gene symbol mappings, and the MME API benchmark set of 50 rare disease patients.
 
 ## Dependencies
-- Python 3.X (not yet tested on 2.7 but should be easy to get working)
+- Python 3.X or 2.7
 
 ## Quickstart
 
@@ -24,8 +24,8 @@ The server is backed by elasticsearch, and creates local indexes of the Human Ph
     # Clone repository
     git clone https://github.com/MatchmakerExchange/reference-server.git
     cd reference-server
-    # Set up virtual environment
-    virtualenv -p python3 --prompt="(mme-server)" .virtualenv
+    # Set up virtual environment (add `-p python3` to force python 3) 
+    virtualenv .virtualenv
     source .virtualenv/bin/activate
     # Install dependencies
     pip install -r requirements.txt
