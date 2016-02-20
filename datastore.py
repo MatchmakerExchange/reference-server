@@ -81,8 +81,7 @@ class PatientManager:
         from api import Patient
 
         if self._db.indices.exists(index=self._index):
-            logging.warning("Patient index already exists: '{}'".format(self._index))
-            return
+            logging.warning("Patient index already exists: {!r}".format(self._index))
         else:
             logging.info("Creating patient ElasticSearch index: '{}'".format(self._index))
             self._db.indices.create(index=self._index, body=self.INDEX_CONFIG)
@@ -199,8 +198,7 @@ class VocabularyManager:
         parser = Parser(filename)
 
         if self._db.indices.exists(index=index):
-            logging.warning('Vocabulary index already exists: {!r} ... skipping'.format(index))
-            return
+            logging.warning('Vocabulary index already exists: {!r}'.format(index))
         else:
             logging.info("Creating index: {!r}".format(index))
             self._db.indices.create(index=index, body=self.INDEX_CONFIG)
