@@ -71,3 +71,4 @@ The server is backed by elasticsearch, and creates local indexes of the Human Ph
 - Add tests for gene index
 - Add end-to-end API query tests
 - Add parser tests
+- Add example for simple UI scoring
