@@ -12,8 +12,10 @@ import sys
 import logging
 import json
 
-import api
-from flask import Flask, request, make_response, after_this_request
+import models
+from flask import Flask, request, after_this_request
+from jsonschema import validate
+from flask_negotiate import consumes, produces
 
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 8000
@@ -25,18 +27,26 @@ app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
 
-# def add_content_type_header(response):
-#     response.headers['Content-Type'] = API_MIME_TYPE
-
 @app.route('/match', methods=['POST'])
+@consumes(API_MIME_TYPE, 'application/json')
+@produces(API_MIME_TYPE)
 def match():
     """Return patients similar to the query patient"""
+    @after_this_request
+    def add_header(response):
+        response.headers['Content-Type'] = API_MIME_TYPE
+        return response
+
     logging.info("Getting flask request data")
     data = request.get_json(force=True)
+
+    # logging.info("Validate syntax")
+    # validate(data, search_schema)
+
     logging.info("Parsing query")
-    query = api.MatchRequest(data)
+    query = models.MatchRequest(data)
     logging.info("Finding similar patients")
-    matches = api.match(query)
+    matches = models.match(query)
     logging.info("Serializing response")
     return (json.dumps(matches.to_json()), 200, {})
 

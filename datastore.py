@@ -44,6 +44,8 @@ DEFAULT_HPO_FILENAME = 'hp.obo'
 GENE_URL = 'http://www.genenames.org/cgi-bin/download?col=gd_hgnc_id&col=gd_app_sym&col=gd_app_name&col=gd_aliases&col=md_eg_id&col=md_ensembl_id&status=Approved&status_opt=2&where=&order_by=gd_app_sym_sort&format=text&limit=&hgnc_dbtag=on&submit=submit'
 DEFAULT_GENE_FILENAME = 'genes.tsv'
 
+# TODO: incorporate disease data from:
+# http://www.orphadata.org/data/xml/en_product1.xml
 
 class PatientManager:
     TYPE_NAME = 'patient'
@@ -78,7 +80,7 @@ class PatientManager:
 
     def index(self, filename):
         """Populate the database with patient data from the given file"""
-        from api import Patient
+        from models import Patient
 
         if self._db.indices.exists(index=self._index):
             logging.warning("Patient index already exists: {!r}".format(self._index))
@@ -118,7 +120,7 @@ class PatientManager:
 
     def find_similar_patients(self, patient, n=5):
         """Return the n most similar patients to the given query api.Patient"""
-        from api import Patient
+        from models import Patient
 
         query_parts = []
         for id in patient._get_implied_present_phenotypes():
