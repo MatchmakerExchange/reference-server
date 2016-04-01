@@ -10,12 +10,13 @@ from __future__ import with_statement, division, unicode_literals
 
 import sys
 import logging
-import json
+
+from flask import Flask, request, after_this_request, jsonify
+from flask_negotiate import consumes, produces
 
 import models
-from flask import Flask, request, after_this_request
-from jsonschema import validate
-from flask_negotiate import consumes, produces
+from schemas import validate_request, validate_response, ValidationError
+
 
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 8000
@@ -38,17 +39,33 @@ def match():
         return response
 
     logging.info("Getting flask request data")
-    data = request.get_json(force=True)
+    request_json = request.get_json(force=True)
 
-    # logging.info("Validate syntax")
-    # validate(data, search_schema)
+    logging.info("Validate request syntax")
+    try:
+        validate_request(request_json)
+    except ValidationError as e:
+        response = jsonify(message='Request does not conform to API specification:\n{}'.format(e))
+        response.status_code = 422
+        return response
 
     logging.info("Parsing query")
-    query = models.MatchRequest(data)
+    request_obj = models.MatchRequest.from_api(request_json)
+
     logging.info("Finding similar patients")
-    matches = models.match(query)
+    response_obj = request_obj.match()
+
     logging.info("Serializing response")
-    return (json.dumps(matches.to_json()), 200, {})
+    response_json = response_obj.to_api()
+
+    logging.info("Validate response syntax")
+    try:
+        validate_response(response_json)
+    except ValidationError as e:
+        # log to console and return response anyway
+        logging.error('Response does not conform to API specification:\n{}'.format(e))
+
+    return jsonify(response_json)
 
 
 def parse_args(args):

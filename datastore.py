@@ -14,13 +14,10 @@ import os
 import json
 import logging
 
-try:
-    from urllib import urlretrieve
-except ImportError:
-    from urllib.request import urlretrieve
-
+from compat import urlretrieve
 from elasticsearch import Elasticsearch
 from parsers import OBOParser, GeneParser
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +90,7 @@ class PatientManager:
 
         logging.info("Found data for {} patient records".format(len(data)))
         for record in data:
-            patient = Patient(record)
+            patient = Patient.from_api(record)
             self.add_patient(patient)
 
         # Update index before returning record count
@@ -103,30 +100,23 @@ class PatientManager:
 
     def add_patient(self, patient):
         """Add the provided api.Patient object to the datastore"""
-        id = patient.id
-        data = self._patient_to_index(patient)
+        id = patient.get_id()
+        data = patient.to_index()
         self._db.index(index=self._index, doc_type=self.TYPE_NAME, id=id, body=data)
         logging.info("Indexed patient: '{}'".format(id))
 
-    def _patient_to_index(self, patient):
-        genes = patient._get_genes()
-        phenotypes = patient._get_implied_present_phenotypes()
+    def match(self, phenotypes, genes, n=5):
+        """Return the n most similar patients, based on a list of phenotypes and candidate genes
 
-        return {
-            'phenotype': list(phenotypes),
-            'gene': list(genes),
-            'doc': patient.to_json(),
-        }
-
-    def find_similar_patients(self, patient, n=5):
-        """Return the n most similar patients to the given query api.Patient"""
-        from models import Patient
+        phenotypes - a list of HPO term IDs (including implied terms)
+        genes - a list of ENSEMBL gene IDs for candidate genes
+        """
 
         query_parts = []
-        for id in patient._get_implied_present_phenotypes():
+        for id in phenotypes:
             query_parts.append({'match': {'phenotype': id}})
 
-        for gene_id in patient._get_genes():
+        for gene_id in genes:
             query_parts.append({'match': {'gene': gene_id}})
 
         query = {
@@ -140,14 +130,7 @@ class PatientManager:
         }
 
         result = self._db.search(index=self._index, body=query)
-
-        scored_patients = []
-        for hit in result['hits']['hits'][:n]:
-            # Just use the ElasticSearch TF/IDF score, normalized to [0, 1]
-            score = 1 - 1 / (1 + hit['_score'])
-            scored_patients.append((score, Patient(hit['_source']['doc'])))
-
-        return scored_patients
+        return result['hits']['hits'][:n]
 
 
 class VocabularyManager:
@@ -262,9 +245,9 @@ class DatastoreConnection:
     def get_vocabulary_term(self, id, index='_all'):
         return self._vocabularies.get_term(id, index=index)
 
-    def find_similar_patients(self, patient, n=5):
-        """Return the n most similar patients to the given query api.Patient"""
-        return self._patients.find_similar_patients(patient=patient, n=n)
+    def match(self, phenotypes, genes, n=5):
+        """Return the n most similar patients, based on a list of phenotypes and candidate genes"""
+        return self._patients.match(phenotypes=phenotypes, genes=genes, n=n)
 
     def search(self, *args, **kwargs):
         """Expose ElasticSearch method"""
@@ -325,6 +308,8 @@ def parse_args(args):
 
 
 def main(args=sys.argv[1:]):
+    from server import app
+
     args = parse_args(args)
     logging.basicConfig(level='INFO')
 
@@ -332,7 +317,8 @@ def main(args=sys.argv[1:]):
     fetch_resource(HPO_URL, args.hpo_filename)
     fetch_resource(GENE_URL, args.gene_filename)
 
-    initialize_backend(args.data_filename, args.hpo_filename, args.gene_filename)
+    with app.app_context():
+        initialize_backend(args.data_filename, args.hpo_filename, args.gene_filename)
 
 
 if __name__ == '__main__':

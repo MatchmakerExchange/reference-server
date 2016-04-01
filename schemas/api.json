@@ -3,6 +3,31 @@
   "title": "MatchmakerExchange API",
 
   "definitions": {
+    "ageOfOnset": {
+      "type": "string",
+      "pattern": "^HP:\\d{7}$"
+    },
+    "feature": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^HP:\\d{7}$"
+        },
+        "observed": {
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "ageOfOnset": {
+          "$ref": "#/definitions/ageOfOnset"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
     "patient": {
       "type": "object",
       "properties": {
@@ -46,10 +71,6 @@
             "NOT_APPLICABLE"
           ]
         },
-        "ageOfOnset": {
-          "type": "string",
-          "pattern": "^HP:\\d{7}$"
-        },
         "inheritanceMode": {
           "type": "string",
           "pattern": "^HP:\\d{7}$"
@@ -72,26 +93,7 @@
         "features": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "pattern": "^HP:\\d{7}$"
-              },
-              "observed": {
-                "enum": [
-                  "yes",
-                  "no"
-                ]
-              },
-              "ageOfOnset": {
-                "type": "string",
-                "pattern": "^HP:\\d{7}$"
-              }
-            },
-            "required": [
-              "id"
-            ]
+            "$ref": "#/definitions/feature"
           }
         },
         "genomicFeatures": {
