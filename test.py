@@ -135,7 +135,7 @@ class DatastoreTests(TestCase):
 
     def test_get_term(self):
         # Lookup term using alias
-        term = self.backend.get_vocabulary_term('HP:0001366')
+        term = self.backend.vocabularies.get_term(id='HP:0001366')
 
         self.assertEqual(term['id'], 'HP:0000252')
         self.assertEqual(term['name'], 'Microcephaly')

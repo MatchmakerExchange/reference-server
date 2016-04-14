@@ -5,7 +5,6 @@ Defines conceptual API objects and corresponding methods for parsing/serializing
 """
 from __future__ import with_statement, division, unicode_literals
 
-import json
 from copy import deepcopy
 
 import flask
@@ -18,7 +17,7 @@ class Feature:
         backend = get_backend()
 
         # Normalize phenotype term
-        term = backend.get_vocabulary_term(self.data['id'])
+        term = backend.vocabularies.get_term(id=self.data['id'])
         self.data['id'] = term['id']
         self.data['label'] = term['name']
         self.phenotypes = term['term_category']
@@ -26,7 +25,7 @@ class Feature:
         # Normalize age of onset
         term_id = self.data.get('ageOfOnset')
         if term_id:
-            term = backend.get_vocabulary_term(term_id)
+            term = backend.vocabularies.get_term(id=term_id)
             self.data['ageOfOnset'] = term['id']
 
         # Normalize observed
@@ -51,7 +50,7 @@ class Gene:
         if gene_id:
             # Normalize gene id
             backend = get_backend()
-            self.term = backend.get_vocabulary_term(gene_id)
+            self.term = backend.vocabularies.get_term(id=gene_id)
             self.data['id'] = self.term['id']
             self.data['label'] = self.term['name']
 
@@ -166,12 +165,12 @@ class MatchRequest:
         patient = Patient.from_api(request['patient'])
         return cls(patient)
 
-    def match(self):
+    def match(self, n=5):
         backend = get_backend()
 
         phenotypes = self.patient.phenotypes
         genes = self.patient.genes
-        hits = backend.match(phenotypes, genes)
+        hits = backend.patients.match(phenotypes, genes, n=n)
 
         matches = []
         for hit in hits:
