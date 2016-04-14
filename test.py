@@ -121,6 +121,7 @@ class ElasticSearchTests(TestCase):
                         {'match': {'phenotype': 'HP:0000522'}},  # Alacrima
                         {'match': {'phenotype': 'HP:0012639'}},  # Abnormal nervous system morphology
                         {'match': {'phenotype': 'HP:0100022'}},  # Movement abnormality
+                        {'match': {'phenotype': 'HP:0002650'}},  # Scoliosis
                         {'match': {'gene': 'NGLY1'}},
                     ]
                 }
