@@ -123,6 +123,11 @@ class GeneParser(TSVParser):
                 'field': 'alt_id',
             },
             {
+                'column': 'Previous Symbols',
+                'field': 'alt_id',
+                'delimiter': ', ',
+            },
+            {
                 'column': 'Synonyms',
                 'field': 'alt_id',
                 'delimiter': ', ',

@@ -30,10 +30,11 @@ DEFAULT_HPO_FILENAME = 'hp.obo'
 #   HGNC ID
 #   Approved Symbol
 #   Approved Name
+#   Previous Symbols
 #   Synonyms
 #   Entrez Gene ID (supplied by NCBI)
 #   Ensembl Gene ID (supplied by Ensembl)
-GENE_URL = 'http://www.genenames.org/cgi-bin/download?col=gd_hgnc_id&col=gd_app_sym&col=gd_app_name&col=gd_aliases&col=md_eg_id&col=md_ensembl_id&status=Approved&status_opt=2&where=&order_by=gd_app_sym_sort&format=text&limit=&hgnc_dbtag=on&submit=submit'
+GENE_URL = 'http://www.genenames.org/cgi-bin/download?col=gd_hgnc_id&col=gd_app_sym&col=gd_app_name&col=gd_prev_sym&col=gd_aliases&col=md_eg_id&col=md_ensembl_id&status=Approved&status_opt=2&where=&order_by=gd_app_sym_sort&format=text&limit=&hgnc_dbtag=on&submit=submit'
 DEFAULT_GENE_FILENAME = 'genes.tsv'
 
 # TODO: incorporate disease data from:
