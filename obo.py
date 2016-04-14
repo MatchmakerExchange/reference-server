@@ -38,9 +38,6 @@ try:
 except ImportError:
     from cStringIO import StringIO
 
-if sys.version_info >= (3,):
-    unicode = str
-
 
 class ParseError(Exception):
     pass
@@ -215,7 +212,7 @@ class Parser(object):
         # If the value starts with a quotation mark, we parse it as a
         # Python string -- luckily this is the same as an OBO string
         if value_and_mod and value_and_mod[0] == '"':
-            stringio = StringIO(unicode(value_and_mod))
+            stringio = StringIO(value_and_mod)
             gen = tokenize.generate_tokens(stringio.readline)
             for toknum, tokval, _, (_, ecol), _ in gen:
                 if toknum == tokenize.STRING:

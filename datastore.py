@@ -11,6 +11,7 @@ from __future__ import with_statement, division, unicode_literals
 
 import json
 import logging
+import codecs
 
 from elasticsearch import Elasticsearch
 from parsers import OBOParser, GeneParser
@@ -57,7 +58,7 @@ class PatientManager:
         """Populate the database with patient data from the given file"""
         from models import Patient
 
-        with open(filename) as ifp:
+        with codecs.open(filename, encoding='utf-8') as ifp:
             data = json.load(ifp)
 
         for record in data:
@@ -181,7 +182,7 @@ class VocabularyManager:
             commands.extend(command)
 
         data = "".join([json.dumps(command) + "\n" for command in commands])
-        self._db.bulk(data, index=index, doc_type=self.TERM_TYPE_NAME, refresh=True)
+        self._db.bulk(data, index=index, doc_type=self.TERM_TYPE_NAME, refresh=True, request_timeout=60)
 
         n = self._db.count(index=index, doc_type=self.TERM_TYPE_NAME)
         logger.info('Index now contains {} terms'.format(n['count']))

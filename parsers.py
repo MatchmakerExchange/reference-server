@@ -4,6 +4,8 @@ Module for providing file and dataset parsing functionality.
 
 from __future__ import with_statement, division, unicode_literals
 
+import codecs
+
 from csv import DictReader
 from collections import defaultdict
 
@@ -23,7 +25,7 @@ class BaseParser:
 
 class OBOParser(BaseParser):
     def documents(self):
-        parser = BaseOBOParser(open(self._filename))
+        parser = BaseOBOParser(codecs.open(self._filename, encoding='utf-8'))
 
         # Parse all terms first
         terms = {}
@@ -69,7 +71,7 @@ class OBOParser(BaseParser):
 
 class TSVParser(BaseParser):
     def _documents(self, columns):
-        with open(self._filename) as ifp:
+        with codecs.open(self._filename, encoding='utf-8') as ifp:
             reader = DictReader(ifp, delimiter=str('\t'))
             for row in reader:
                 term = defaultdict(list)
