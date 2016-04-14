@@ -117,20 +117,19 @@ class ElasticSearchTests(TestCase):
             'query': {
                 'bool': {
                     'should': [
-                        {'match': {'phenotype': 'HP:0000252'}},  # Microcephaly
-                        {'match': {'phenotype': 'HP:0000522'}},  # Alacrima
-                        {'match': {'phenotype': 'HP:0012639'}},  # Abnormal nervous system morphology
-                        {'match': {'phenotype': 'HP:0100022'}},  # Movement abnormality
-                        {'match': {'phenotype': 'HP:0002650'}},  # Scoliosis
-                        {'match': {'gene': 'NGLY1'}},
+                        {'match': {'phenotype': 'HP:0001250'}},  # Seizures
+                        {'match': {'phenotype': 'HP:0006852'}},  # Eposodic hypotonia
+                        {'match': {'phenotype': 'HP:0011675'}},  # Arrhythmia
+                        {'match': {'phenotype': 'HP:0003312'}},  # Abnormal vertebra
+                        {'match': {'gene': 'GPX4'}},
                     ]
                 }
             }
         }
         results = self.es.search(index='patients', body=query)
         hits = results['hits']['hits']
-        self.assertEqual(hits[0]['_id'], 'P0001070')
-        self.assertGreater(hits[0]['_score'], hits[1]['_score'])
+        # Most similar patient from test dataset
+        self.assertEqual(hits[0]['_id'], 'P0001059')
 
 
 class DatastoreTests(TestCase):
