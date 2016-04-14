@@ -3,3 +3,4 @@ elasticsearch>=2.0.0,<3.0.0
 rdflib
 jsonschema
 Flask-Negotiate
+rfc3987

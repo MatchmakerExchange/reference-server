@@ -78,7 +78,7 @@ class ElasticSearchTests(TestCase):
         doc = term['_source']
         self.assertEqual(doc['name'], 'Microcephaly')
         self.assertAlmostEqual(len(doc['alt_id']), 4, delta=1)
-        self.assertIn('small head', doc['synonym'])
+        self.assertIn('small head', [term.lower() for term in doc['synonym']])
         self.assertCountEqual(doc['is_a'], ['HP:0040195', 'HP:0007364'])
         self.assertAlmostEqual(len(doc['term_category']), 19, delta=2)
 
@@ -119,13 +119,17 @@ class ElasticSearchTests(TestCase):
                     'should': [
                         {'match': {'phenotype': 'HP:0000252'}},  # Microcephaly
                         {'match': {'phenotype': 'HP:0000522'}},  # Alacrima
+                        {'match': {'phenotype': 'HP:0012639'}},  # Abnormal nervous system morphology
+                        {'match': {'phenotype': 'HP:0100022'}},  # Movement abnormality
                         {'match': {'gene': 'NGLY1'}},
                     ]
                 }
             }
         }
         results = self.es.search(index='patients', body=query)
-        self.assertEqual(results['hits']['hits'][0]['_id'], 'P0001070')
+        hits = results['hits']['hits']
+        self.assertEqual(hits[0]['_id'], 'P0001070')
+        self.assertGreater(hits[0]['_score'], hits[1]['_score'])
 
 
 class DatastoreTests(TestCase):
