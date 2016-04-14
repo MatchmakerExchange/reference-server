@@ -17,5 +17,7 @@ before_script:
   - sleep 10
 before_install:
   - pip install codecov
+  - pip install coveralls
 after_success:
   - codecov
+  - coveralls
