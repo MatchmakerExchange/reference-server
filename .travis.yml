@@ -9,5 +9,11 @@ python:
   - "3.4"
 install:
   - pip install -r requirements.txt
+  - python main.py quickstart
 script:
   - python -m unittest discover
+services:
+  - elasticsearch
+before_script:
+  # Delay for elasticsearch to start
+  - sleep 10
