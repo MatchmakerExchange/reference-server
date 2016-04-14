@@ -11,8 +11,8 @@ import logging
 from flask import Flask, request, after_this_request, jsonify
 from flask_negotiate import consumes, produces
 
-from models import MatchRequest
-from schemas import validate_request, validate_response, ValidationError
+from .models import MatchRequest
+from .schemas import validate_request, validate_response, ValidationError
 
 
 API_MIME_TYPE = 'application/vnd.ga4gh.matchmaker.v1.0+json'

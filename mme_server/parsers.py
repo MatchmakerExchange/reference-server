@@ -9,7 +9,7 @@ import codecs
 from csv import DictReader
 from collections import defaultdict
 
-from obo import Parser as BaseOBOParser
+from .obo import Parser as BaseOBOParser
 
 
 class BaseParser:

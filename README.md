@@ -7,7 +7,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 
 
 ## Dependencies
-- Python 2.7 or 3.X
+- Python 2.7 or 3.3+
 - ElasticSearch
 
 
@@ -15,46 +15,46 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 
 1. Clone the repository:
 
-    ```bash
+    ```sh
     git clone https://github.com/MatchmakerExchange/reference-server.git
     cd reference-server
     ```
 
-1. Install the Python package dependencies (it's recommended that you use a [Python virtual environment](#install-es)):
+1. Install the Python package dependencies (it's recommended that you do this inside a [Python virtual environment](#install-venv)):
 
-    ```bash
-    pip install -r requirements.txt
+    ```sh
+    pip install -e .
     ```
 
 1. Start up your elasticsearch server in another shell (see the [ElasticSearch instructions](#install-es) for more information).
 
-    ```bash
+    ```sh
     ./path/to/elasticsearch
     ```
 
 1. Download and index vocabularies and sample data:
 
-    ```bash
-    python server.py quickstart
+    ```sh
+    mme-server quickstart
     ```
 
 1. Run tests:
 
-    ```bash
-    python test.py
+    ```sh
+    mme-server test
     ```
 
 1. Start up MME reference server:
 
-    ```bash
-    python server.py run
+    ```sh
+    mme-server start
     ```
 
     By default, the server listens globally (`--host 0.0.0.0`) on port 8000 (`--port 8000`).
 
 1. Try it out:
 
-    ```bash
+    ```sh
     curl -XPOST -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
          -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
          -d '{"patient":{
@@ -73,17 +73,17 @@ It's recommended that you run the server within a Python virtual environment so 
 
 To set up your Python virtual environment:
 
-```bash
+```sh
 # Set up virtual environment within a folder '.virtualenv' (add `-p python3` to force python 3)
 virtualenv .virtualenv
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e .
 ```
 
 You can then activate this environment within a particular shell with:
 
-```bash
+```sh
 source .virtualenv/bin/activate
 ```
 
@@ -91,14 +91,14 @@ source .virtualenv/bin/activate
 
 First, download elasticsearch:
 
-```bash
+```sh
 wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.1.1/elasticsearch-2.1.1.tar.gz
 tar -xzf elasticsearch-2.1.1.tar.gz
 ```
 
 Then, start up a local elasticsearch cluster to serve as our database (`-Des.path.data=data` puts the elasticsearch indices in a subdirectory called `data`):
 
-```bash
+```sh
 ./elasticsearch-2.1.1/bin/elasticsearch -Des.path.data=data
 ```
 
@@ -109,22 +109,22 @@ Then, start up a local elasticsearch cluster to serve as our database (`-Des.pat
 Custom patient data can be indexed by the server in two ways (if a patient 'id' matches an existing patient, the existing patient is updated):
 
 1. Batch index from the command line:
-    ```bash
-    python server.py index patients --filename patients.json
+    ```sh
+    mme-server index patients --filename patients.json
     ```
 
 1. Batch index from the Python interface:
 
-    ```python
-    >>> from models import DatastoreConnection
+    ```py
+    >>> from mme_server.models import DatastoreConnection
     >>> db = DatastoreConnection()
     >>> db.patients.index('/path/to/patients.json')
     ```
 
 1. Single patient index the Python interface:
 
-    ```python
-    >>> from models import Patient, DatastoreConnection
+    ```py
+    >>> from mme_server.models import Patient, DatastoreConnection
     >>> db = DatastoreConnection()
     >>> patient = Patient.from_api({...})
     >>> db.patients.index_patient(patient)

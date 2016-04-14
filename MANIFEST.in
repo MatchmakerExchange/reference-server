@@ -1,0 +1,5 @@
+# Include static package files
+include LICENSE.txt
+include README.md
+include MANIFEST.in
+recursive-include mme_server/schemas *.json

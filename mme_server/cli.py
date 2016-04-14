@@ -6,11 +6,11 @@ from __future__ import with_statement, division, unicode_literals
 import sys
 import os
 import logging
+import unittest
 
-from compat import urlretrieve
-
-from models import get_backend
-from server import app
+from .compat import urlretrieve
+from .models import get_backend
+from .server import app
 
 
 DEFAULT_HOST = '0.0.0.0'
@@ -73,6 +73,11 @@ def fetch_resource(filename, url):
         logger.info('Saved file to: {}'.format(filename))
 
 
+def run_tests():
+    suite = unittest.TestLoader().discover('.'.join([__package__, 'tests']))
+    unittest.TextTestRunner().run(suite)
+
+
 def parse_args(args):
     from argparse import ArgumentParser
 
@@ -102,7 +107,7 @@ def parse_args(args):
                            help="Download data from the following url")
     subparser.set_defaults(function=index_file)
 
-    subparser = subparsers.add_parser('run', description="Start running a simple Matchmaker Exchange API server")
+    subparser = subparsers.add_parser('start', description="Start running a simple Matchmaker Exchange API server")
     subparser.add_argument("-p", "--port", default=DEFAULT_PORT,
                            dest="port", type=int, metavar="PORT",
                            help="The port the server will listen on (default: %(default)s)")
@@ -110,6 +115,9 @@ def parse_args(args):
                            dest="host", metavar="IP",
                            help="The host the server will listen to (0.0.0.0 to listen globally; 127.0.0.1 to listen locally; default: %(default)s)")
     subparser.set_defaults(function=app.run)
+
+    subparser = subparsers.add_parser('test', description="Run tests")
+    subparser.set_defaults(function=run_tests)
 
     args = parser.parse_args(args)
     if not hasattr(args, 'function'):

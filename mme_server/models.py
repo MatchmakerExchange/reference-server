@@ -8,7 +8,8 @@ from __future__ import with_statement, division, unicode_literals
 from copy import deepcopy
 
 import flask
-from datastore import DatastoreConnection
+
+from .datastore import DatastoreConnection
 
 
 class Feature:

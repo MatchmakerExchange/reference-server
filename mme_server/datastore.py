@@ -14,7 +14,8 @@ import logging
 import codecs
 
 from elasticsearch import Elasticsearch
-from parsers import OBOParser, GeneParser
+
+from .parsers import OBOParser, GeneParser
 
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ class PatientManager:
 
     def index(self, filename):
         """Populate the database with patient data from the given file"""
-        from models import Patient
+        from .models import Patient
 
         with codecs.open(filename, encoding='utf-8') as ifp:
             data = json.load(ifp)

@@ -1,18 +1,22 @@
-import os
+from __future__ import with_statement, division, unicode_literals
+
 import json
 
-from jsonschema import validate, RefResolver, FormatChecker, ValidationError
+from pkgutil import get_data
+
+from jsonschema import validate, RefResolver, FormatChecker, ValidationError as BaseValidationError
 
 
-SCHEMA_FOLDER = 'schemas'
 SCHEMA_FILE = 'api.json'
 REQUEST_SCHEMA = '#/definitions/request'
 RESPONSE_SCHEMA = '#/definitions/response'
+ValidationError = BaseValidationError
 
 
 def load_schema():
-    with open(os.path.join(SCHEMA_FOLDER, SCHEMA_FILE)) as ifp:
-        return json.load(ifp)
+    # Read resource from same directory of (potentially-zipped) module
+    schema_data = get_data(__package__, SCHEMA_FILE).decode('utf-8')
+    return json.loads(schema_data)
 
 
 def validate_subschema(data, schema_selector):

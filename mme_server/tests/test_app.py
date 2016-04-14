@@ -1,16 +1,14 @@
 import json
 import unittest
-import os
-import logging
 
 from copy import deepcopy
 from unittest import TestCase
 
-import models
 from elasticsearch import Elasticsearch
-from datastore import DatastoreConnection
-from schemas import validate_request, validate_response, ValidationError
 
+from mme_server import models
+from mme_server.datastore import DatastoreConnection
+from mme_server.schemas import validate_request, validate_response, ValidationError
 
 EXAMPLE_REQUEST = {
     'patient': {
@@ -149,7 +147,7 @@ class DatastoreTests(TestCase):
 
 class MatchRequestTests(TestCase):
     def setUp(self):
-        from server import app
+        from mme_server.server import app
         self.app = app
         self.request = deepcopy(EXAMPLE_REQUEST)
 
@@ -192,7 +190,7 @@ class MatchRequestTests(TestCase):
 
 class FlaskTests(unittest.TestCase):
     def setUp(self):
-        from server import app
+        from mme_server.server import app
 
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
