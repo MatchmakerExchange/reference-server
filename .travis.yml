@@ -15,3 +15,7 @@ services:
 before_script:
   # Delay for elasticsearch to start
   - sleep 10
+before_install:
+  - pip install codecov
+after_success:
+  - codecov
