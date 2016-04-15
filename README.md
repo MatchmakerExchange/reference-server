@@ -1,4 +1,8 @@
 # Matchmaker Exchange Reference Server
+[![Build Status](https://api.travis-ci.org/MatchmakerExchange/reference-server.svg)](https://travis-ci.org/MatchmakerExchange/reference-server)
+[![License](https://img.shields.io/github/license/MatchmakerExchange/reference-server.svg)](LICENSE.txt)
+[![Coverage Status](https://img.shields.io/coveralls/MatchmakerExchange/reference-server/master.svg)](https://coveralls.io/github/MatchmakerExchange/reference-server?branch=master)
+
 A simple server that stores patient records and implements the [Matchmaker Exchange API](https://github.com/ga4gh/mme-apis).
 
 This is an example implementation, written by the [Matchmaker Exchange](http://www.matchmakerexchange.org/) technical team. The server uses a single elasticsearch instance to index the patient records, the [Human Phenotype Ontology](http://human-phenotype-ontology.github.io/), and Ensembl-Entrez-HGNC gene symbol mappings. By default, you can load the MME API benchmark dataset of 50 rare disease patient records compiled from the literature ([see the publication for more details](http://onlinelibrary.wiley.com/doi/10.1002/humu.22850)).
