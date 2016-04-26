@@ -71,6 +71,9 @@
             "NOT_APPLICABLE"
           ]
         },
+        "ageOfOnset": {
+          "$ref": "#/definitions/ageOfOnset"
+        },
         "inheritanceMode": {
           "type": "string",
           "pattern": "^HP:\\d{7}$"
