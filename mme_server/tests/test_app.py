@@ -1,3 +1,4 @@
+import os
 import json
 import unittest
 
@@ -6,7 +7,6 @@ from unittest import TestCase
 
 from elasticsearch import Elasticsearch
 
-from mme_server import models
 from mme_server.datastore import DatastoreConnection
 from mme_server.schemas import validate_request, validate_response, ValidationError
 
@@ -19,6 +19,8 @@ EXAMPLE_REQUEST = {
             'institution': 'Contact Institution',
             'href': 'mailto:first.last@example.com',
         },
+        'ageOfOnset': 'HP:0003577',
+        'inheritanceMode': 'HP:0000006',
         'features': [
             {
                 'id': 'HP:0000252',
@@ -27,15 +29,16 @@ EXAMPLE_REQUEST = {
             {
                 'id': 'HP:0000522',
                 'label': 'Alacrima',
+                'ageOfOnset': 'HP:0003593',
             },
         ],
         'genomicFeatures': [{
             "gene": {
-              "id": "EFTUD2"
+              "id": "EFTUD2",
             },
             "type": {
               "id": "SO:0001587",
-              "label": "STOPGAIN"
+              "label": "STOPGAIN",
             },
             "variant": {
               "alternateBases": "A",
@@ -43,12 +46,12 @@ EXAMPLE_REQUEST = {
               "end": 42929131,
               "referenceBases": "G",
               "referenceName": "17",
-              "start": 42929130
+              "start": 42929130,
             },
-            "zygosity": 1
+            "zygosity": 1,
         }],
         'disorders': [{
-            "id": "MIM:610536"
+            "id": "MIM:610536",
         }],
     }
 }
@@ -201,13 +204,11 @@ class FlaskTests(unittest.TestCase):
     def assertValidResponse(self, data):
         validate_response(data)
 
-    def test_with_headers(self):
+    def test_match_request(self):
         response = self.client.post('/match', data=self.data, headers=self.headers)
         self.assertEqual(response.status_code, 200)
-
-    def test_response_content_type(self):
-        response = self.client.post('/match', data=self.data, headers=self.headers)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.assertValidResponse(json.loads(response.get_data(as_text=True)))
 
     def test_accept_header_required(self):
         headers = self.headers
@@ -226,9 +227,29 @@ class FlaskTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
 
-    def test_response_schema(self):
+
+class EndToEndTests(unittest.TestCase):
+    def test_query(self):
+        from mme_server.server import app
+        self.client = app.test_client()
+        self.data = json.dumps(EXAMPLE_REQUEST)
+        self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.content_type_header = ('Content-Type', 'application/json')
+        self.headers = [self.accept_header, self.content_type_header]
+
         response = self.client.post('/match', data=self.data, headers=self.headers)
-        self.assertValidResponse(json.loads(response.get_data(as_text=True)))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        response_data = json.loads(response.get_data(as_text=True))
+        validate_response(response_data)
+        self.assertEqual(len(response_data['results']), 5)
+
+    @unittest.skipUnless('MME_TEST_QUICKSTART' in os.environ, 'Not testing quickstart data loading')
+    def test_quickstart(self):
+        from mme_server import main
+        # Index all data
+        main(['quickstart'])
+        self.test_query()
 
 
 if __name__ == '__main__':
