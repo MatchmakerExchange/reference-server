@@ -10,7 +10,10 @@ install:
   - pip install -e .
   - mme-server quickstart
 script:
-  - coverage run --source=mme_server setup.py test
+  # Test via module runner
+  - python -m mme_server test
+  # Test via setup.py (with environment variable to also test quickstart)
+  - MME_TEST_QUICKSTART=1 coverage run --source=mme_server setup.py test
 services:
   - elasticsearch
 before_script:
