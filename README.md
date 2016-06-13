@@ -80,9 +80,6 @@ To set up your Python virtual environment:
 ```sh
 # Set up virtual environment within a folder '.virtualenv' (add `-p python3` to force python 3)
 virtualenv .virtualenv
-
-# Install dependencies
-pip install -e .
 ```
 
 You can then activate this environment within a particular shell with:
