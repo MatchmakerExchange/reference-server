@@ -11,14 +11,14 @@ import logging
 from flask import Flask, request, after_this_request, jsonify
 from flask_negotiate import consumes, produces
 
-from .models import MatchRequest
+from .models import MatchRequest, get_backend
 from .schemas import validate_request, validate_response, ValidationError
 
 
 API_MIME_TYPE = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 
 # Global flask application
-app = Flask(__name__)
+app = Flask(__name__.split('.')[0])
 # Logger
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,15 @@ def match():
     @after_this_request
     def add_header(response):
         response.headers['Content-Type'] = API_MIME_TYPE
+        return response
+
+    logger.info("Authorizing request")
+    token = response.headers['X-Auth-Token']
+    db = get_backend()
+    server = db.servers.verify(token)
+    if not server:
+        response = jsonify(message='X-Auth-Token not authorized')
+        response.status_code = 401
         return response
 
     logger.info("Getting flask request data")
@@ -60,6 +69,7 @@ def match():
     except ValidationError as e:
         # log to console and return response anyway
         logger.error('Response does not conform to API specification:\n{}'.format(e))
+        print(type(response_json['results'][0]['patient']))
 
     return jsonify(response_json)
 

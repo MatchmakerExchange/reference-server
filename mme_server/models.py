@@ -94,11 +94,11 @@ class Patient:
             genes = set()
 
         # Set of all present and implied features
-        self.phenotypes = phenotypes
+        self.phenotypes = set(phenotypes)
         # Set of all candidate gene ids
-        self.genes = genes
+        self.genes = set(genes)
         # API representation of the patient
-        self.data = data
+        self.data = dict(data)
 
     @classmethod
     def from_api(cls, data):
@@ -135,7 +135,8 @@ class Patient:
         return cls(data, phenotypes, genes)
 
     @classmethod
-    def from_index(cls, doc):
+    def from_index(cls, hit):
+        doc = hit.to_dict()  # Convert from elasticsearch_dsl.AttrDict
         obj = cls()
         obj.phenotypes = set(doc['phenotype'])
         obj.genes = set(doc['gene'])
@@ -152,7 +153,7 @@ class Patient:
         doc = {
             'phenotype': sorted(self.phenotypes),
             'gene': sorted(self.genes),
-            'doc': self.data,
+            'doc': dict(self.data),
         }
         return doc
 
@@ -171,10 +172,10 @@ class MatchRequest:
 
         phenotypes = self.patient.phenotypes
         genes = self.patient.genes
-        hits = backend.patients.match(phenotypes, genes, n=n)
+        hits = backend.patients.match(phenotypes, genes)
 
         matches = []
-        for hit in hits:
+        for hit in hits[:n]:
             match = MatchResult(self.patient, hit)
             matches.append(match)
 
@@ -188,8 +189,7 @@ class MatchResult:
         self.query_patient = query_patient
 
         # Parse the patient from the matched doc
-        doc = hit['_source']
-        self.match_patient = Patient.from_index(doc)
+        self.match_patient = Patient.from_index(hit)
 
         # Score the match
         self.hit = hit
@@ -203,7 +203,7 @@ class MatchResult:
 
     def get_score(self):
         # Use the ElasticSearch TF/IDF score, normalized to [0, 1]
-        return 1 - 1 / (1 + self.hit['_score'])
+        return 1 - 1 / (1 + float(self.hit.meta.score))
 
     def to_api(self):
         return self.data

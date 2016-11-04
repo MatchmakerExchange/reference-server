@@ -14,11 +14,109 @@ import logging
 import codecs
 
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search, Q
 
 from .parsers import OBOParser, GeneParser
 
 
 logger = logging.getLogger(__name__)
+
+
+class ServerManager:
+    TYPE_NAME = 'server'
+    INDEX_CONFIG = {
+        'mappings': {
+            TYPE_NAME: {
+                'properties': {
+                    'server_id': {
+                        'type': 'string',
+                        'index': 'not_analyzed',
+                    },
+                    'server_label': {
+                        'type': 'string',
+                        'index': 'not_analyzed',
+                    },
+                    'server_key': {
+                        'type': 'string',
+                        'index': 'not_analyzed',
+                    },
+                    'direction': {
+                        'type': 'string',
+                        'index': 'not_analyzed',
+                    },
+                    'base_url': {
+                        'type': 'string',
+                        'index': 'not_analyzed',
+                    }
+                }
+            }
+        }
+    }
+    FIELDS = ['server_id', 'server_label', 'server_key', 'direction', 'base_url']
+
+    def __init__(self, index='servers', backend=None):
+        if backend is None:
+            backend = Elasticsearch()
+
+        self._db = backend
+        self._index = index
+
+    def add(self, server_id, server_label, server_key, direction, base_url):
+        if base_url and not base_url.startswith('https://'):
+            logger.error('base URL must start with "https://"')
+            return
+
+        if not self._db.indices.exists(index=self._index):
+            logger.info("Creating patient ElasticSearch index: {!r}".format(self._index))
+            self._db.indices.create(index=self._index, body=self.INDEX_CONFIG)
+
+        # If it already exists, update
+        s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+        s = s.filter('term', server_id=data['server_id'])
+        s = s.filter('term', direction=data['direction'])
+        results = s.execute()
+        if results.hits.total == 1:
+            # Found a match, so update instead
+            id = result.hits[0].meta.id
+            self._db.index(index=self._index, doc_type=self.TYPE_NAME, id=id, body=data)
+            logger.info("Updated authorization server:{} direction:{}".format(data['server_id'], data['direction']))
+        elif results.hits.total:
+            logger.error('Found two or more matching server entries')
+        else:
+            # Create a new server entry
+            self._db.create(index=self._index, doc_type=self.TYPE_NAME, body=data)
+            logger.info("Authorized server:{} direction:{}".format(data['server_id'], data['direction']))
+
+    def remove(self, server_id, direction):
+        if self._db.indices.exists(index=self._index):
+            s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+            s = s.filter('term', server_id=server_id)
+            if direction:
+                s = s.filter('term', direction=direction)
+            results = s.execute()
+
+            for hit in results:
+                id = hit.meta.id
+                self._db.delete(index=self._index, doc_type=self.TYPE_NAME, id=id)
+                logger.info("Deleted server:{} direction:{}".format(hit.server_id, hit.direction))
+
+    def list(self):
+        if self._db.indices.exists(index=self._index):
+            s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+            s = s.query('match_all')
+            response = s.execute()
+            print('\t'.join(self.FIELDS))
+            for hit in response:
+                print('\t'.join([str(hit[field]) for field in self.FIELDS]))
+
+    def verify(self, key):
+        if key and self._db.indices.exists(index=self._index):
+            s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+            s = s.filter('term', server_key=key)
+            s = s.filter('term', direction='in')
+            results = s.execute()
+            if results.hits:
+                return result.hits[0]
 
 
 class PatientManager:
@@ -86,8 +184,8 @@ class PatientManager:
         self._db.index(index=self._index, doc_type=self.TYPE_NAME, id=id, body=data)
         logger.info("Indexed patient: {!r}".format(id))
 
-    def match(self, phenotypes, genes, n=5):
-        """Return the n most similar patients, based on a list of phenotypes and candidate genes
+    def match(self, phenotypes, genes, n=10):
+        """Return an elasticsearch_dsl.Response of the most similar patients to a list of phenotypes and candidate genes
 
         phenotypes - a list of HPO term IDs (including implied terms)
         genes - a list of ENSEMBL gene IDs for candidate genes
@@ -95,28 +193,21 @@ class PatientManager:
 
         query_parts = []
         for id in phenotypes:
-            query_parts.append({'match': {'phenotype': id}})
+            query_parts.append(Q('match', phenotype=id))
 
         for gene_id in genes:
-            query_parts.append({'match': {'gene': gene_id}})
+            query_parts.append(Q('match', gene=gene_id))
 
-        query = {
-            'query': {
-                'bool': {
-                    'should': [
-                        query_parts
-                    ]
-                }
-            }
-        }
-
-        result = self._db.search(index=self._index, body=query, size=n)
-        return result['hits']['hits']
+        s = Search(using=self._db, index=self._index)
+        query = Q('bool', should=query_parts)
+        s = s.query(query)
+        s = s[:n]
+        response = s.execute()
+        return response
 
 
 class VocabularyManager:
     TERM_TYPE_NAME = 'term'
-    META_TYPE_NAME = 'meta'
     INDEX_CONFIG = {
         'mappings': {
             TERM_TYPE_NAME: {
@@ -182,37 +273,25 @@ class VocabularyManager:
             ]
             commands.extend(command)
 
-        data = "".join([json.dumps(command) + "\n" for command in commands])
+        data = ''.join([json.dumps(command) + '\n' for command in commands])
         self._db.bulk(data, index=index, doc_type=self.TERM_TYPE_NAME, refresh=True, request_timeout=60)
 
         n = self._db.count(index=index, doc_type=self.TERM_TYPE_NAME)
         logger.info('Index now contains {} terms'.format(n['count']))
 
-    def index_hpo(self, filename):
-        return self.index(index='hpo', filename=filename, Parser=OBOParser)
+    def index_hpo(self, filename, index='hpo'):
+        return self.index(index=index, filename=filename, Parser=OBOParser)
 
-    def index_genes(self, filename):
-        return self.index(index='genes', filename=filename, Parser=GeneParser)
+    def index_genes(self, filename, index='genes'):
+        return self.index(index=index, filename=filename, Parser=GeneParser)
 
     def get_term(self, id, index='_all'):
         """Get vocabulary term by ID"""
-        query = {
-            'query': {
-                'filtered': {
-                    'filter': {
-                        'bool': {
-                            'should': [
-                                {'term': {'id': id}},
-                                {'term': {'alt_id': id}},
-                            ]
-                        }
-                    }
-                }
-            }
-        }
-        results = self._db.search(index=index, doc_type=self.TERM_TYPE_NAME, body=query)
-        if results['hits']['total'] == 1:
-            return results['hits']['hits'][0]['_source']
+        s = Search(using=self._db, index=index, doc_type=self.TERM_TYPE_NAME)
+        s = s.query(Q('term', id=id) | Q('term', alt_id=id))
+        response = s.execute()
+        if response.hits.total == 1:
+            return response.hits[0].to_dict()
         else:
             logger.error("Unable to uniquely resolve term: {!r}".format(id))
 
@@ -222,3 +301,4 @@ class DatastoreConnection:
         self._db = Elasticsearch()
         self.patients = PatientManager(backend=self._db)
         self.vocabularies = VocabularyManager(backend=self._db)
+        self.servers = ServerManager(backend=self._db)

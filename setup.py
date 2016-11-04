@@ -12,6 +12,7 @@ INSTALL_REQUIRES = [
     'Flask>=0.10.1',
     'Flask-Negotiate',
     'elasticsearch>=2.0.0,<3.0.0',
+    'elasticsearch-dsl>=2.0.0,<3.0.0',
     'rdflib',
     'jsonschema',
     'rfc3987',

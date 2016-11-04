@@ -73,9 +73,55 @@ def fetch_resource(filename, url):
         logger.info('Saved file to: {}'.format(filename))
 
 
+def list_servers():
+    with app.app_context():
+        backend = get_backend()
+        backend.servers.list()
+
+
+def add_server(id, key, direction, label=None, base_url=None):
+    if not label:
+        label = id
+
+    if direction == 'out' and not base_url:
+        raise Exception('--base-url must be specified for outgoing servers')
+
+    with app.app_context():
+        backend = get_backend()
+        backend.servers.add(server_id=id, server_key=key, direction=direction, server_label=label, base_url=base_url)
+
+
+def remove_server(id, direction):
+    with app.app_context():
+        backend = get_backend()
+        backend.servers.remove(server_id=id, direction=direction)
+
+
 def run_tests():
     suite = unittest.TestLoader().discover('.'.join([__package__, 'tests']))
     unittest.TextTestRunner().run(suite)
+
+
+def add_auth_parser(parser):
+    auth_parser = parser.add_parser('auth', description="Authorization sub-commands")
+    subparsers = auth_parser.add_subparsers(title='subcommands')
+    subparser = subparsers.add_parser('add', description="Add server authorization")
+    subparser.add_argument("id", help="A unique server identifier")
+    subparser.add_argument("key", help="The secret key used to authenticate requests to/from the server")
+    subparser.add_argument("direction", choices=["in", "out"],
+        help="Direction of server authorization, 'in': the other server can send requests, 'out': this server can send requests")
+    subparser.add_argument("--label", help="The display name for the server ")
+    subparser.add_argument("--base-url", dest="base_url", help="The base URL for sending API requests to the other server (e.g., <base-url>/match should be a valid endpoint). Must be specified for outgoing requests")
+    subparser.set_defaults(function=add_server)
+
+    subparser = subparsers.add_parser('rm', description="Remove server authorization")
+    subparser.add_argument("id", help="Server identifier")
+    subparser.add_argument("direction", choices=["in", "out"],
+        help="Direction of server authorization, 'in': the other server can send requests, 'out': this server can send requests")
+    subparser.set_defaults(function=remove_server)
+
+    subparser = subparsers.add_parser('list', description="List all existing server authorizations")
+    subparser.set_defaults(function=list_servers)
 
 
 def parse_args(args):
@@ -115,6 +161,8 @@ def parse_args(args):
                            dest="host", metavar="IP",
                            help="The host the server will listen to (0.0.0.0 to listen globally; 127.0.0.1 to listen locally; default: %(default)s)")
     subparser.set_defaults(function=app.run)
+
+    add_auth_parser(subparsers)
 
     subparser = subparsers.add_parser('test', description="Run tests")
     subparser.set_defaults(function=run_tests)
