@@ -48,6 +48,12 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
     mme-server test
     ```
 
+1. Authorize an incoming server:
+
+    ```sh
+    mme-server auth add myserver in --key myauthtoken
+    ```
+
 1. Start up MME reference server:
 
     ```sh
@@ -61,6 +67,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
     ```sh
     curl -XPOST -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
          -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
+         -H 'X-Auth-Token: myauthtoken' \
          -d '{"patient":{
         "id":"1",
         "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"},

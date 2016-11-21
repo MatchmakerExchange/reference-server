@@ -22,44 +22,97 @@ from .parsers import OBOParser, GeneParser
 logger = logging.getLogger(__name__)
 
 
+class ESIndex:
+    def __init__(self, db, name, doc_type, doc_config):
+        self._db = db
+        self._name = name
+        self._doc_type = doc_type
+        self._doc_config = doc_config
+
+    def _get_config(self):
+        return {
+            'mappings': {
+                self._doc_type: self._doc_config
+            }
+        }
+
+    def create(self):
+        logger.info("Creating ElasticSearch index: {!r}".format(self._name))
+        return self._db.indices.create(index=self._name, body=self._get_config())
+
+    def exists(self):
+        return self._db.indices.exists(index=self._name)
+
+    def ensure_exists(self):
+        if not self.exists():
+            self.create()
+
+    def search(self):
+        return Search(using=self._db, index=self._name, doc_type=self._doc_type)
+
+    def save(self, doc, id=None):
+        """Create a new document if id is None, else update"""
+        # Ensure the index exists
+        self.ensure_exists()
+
+        if id is None:
+            self._db.create(index=self._name, doc_type=self._doc_type, body=doc)
+        else:
+            self._db.index(index=self._name, doc_type=self._doc_type, id=id, body=doc)
+
+    def delete(self, id, index=None):
+        if self.exists():
+            self._db.delete(index=self._name, doc_type=self._doc_type, id=id)
+
+    def refresh(self):
+        self._db.indices.refresh(index=self._name)
+
+    def count(self):
+        self._db.count(index=self._name, doc_type=self._doc_type)
+
+    def bulk(self, data, refresh=True, request_timeout=60, **args):
+        self._db.bulk(data, index=self._name, doc_type=self._doc_type)
+
+
 class ServerManager:
-    TYPE_NAME = 'server'
-    INDEX_CONFIG = {
-        'mappings': {
-            TYPE_NAME: {
-                'properties': {
-                    'server_id': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'server_label': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'server_key': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'direction': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'base_url': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    }
-                }
+    FIELDS = ['server_id', 'server_label', 'server_key', 'direction', 'base_url']
+    DOC_CONFIG = {
+        'properties': {
+            'server_id': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'server_label': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'server_key': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'direction': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'base_url': {
+                'type': 'string',
+                'index': 'not_analyzed',
             }
         }
     }
-    FIELDS = ['server_id', 'server_label', 'server_key', 'direction', 'base_url']
 
-    def __init__(self, index='servers', backend=None):
+    def __init__(self, backend=None):
         if backend is None:
             backend = Elasticsearch()
 
-        self._db = backend
-        self._index = index
+        self._index = ESIndex(db=backend,
+                              name='servers',
+                              doc_type='server',
+                              doc_config=self.DOC_CONFIG)
+
+    @property
+    def index(self):
+        return self._index
 
     def add(self, server_id, server_label, server_key, direction, base_url):
         assert server_id and server_key and direction in ['in', 'out']
@@ -68,10 +121,7 @@ class ServerManager:
             logger.error('base URL must start with "https://"')
             return
 
-        if not self._db.indices.exists(index=self._index):
-            logger.info("Creating patient ElasticSearch index: {!r}".format(self._index))
-            self._db.indices.create(index=self._index, body=self.INDEX_CONFIG)
-
+        self.index.ensure_exists()
 
         data = {
             'server_id': server_id,
@@ -82,89 +132,93 @@ class ServerManager:
         }
 
         # If it already exists, update
-        s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+        s = self.index.search()
         s = s.filter('term', server_id=server_id)
         s = s.filter('term', direction=direction)
         results = s.execute()
-        if results.hits.total == 1:
-            # Found a match, so update instead
-            id = results.hits[0].meta.id
-            self._db.index(index=self._index, doc_type=self.TYPE_NAME, id=id, body=data)
-            logger.info("Updated authorization server:\n{}".format(json.dumps(data, indent=4, sort_keys=True)))
-        elif results.hits.total:
+
+        if results.hits.total > 1:
             logger.error('Found two or more matching server entries')
         else:
-            # Create a new server entry
-            self._db.create(index=self._index, doc_type=self.TYPE_NAME, body=data)
+            id = None
+            if results.hits.total == 1:
+                # Found a match, so update instead
+                id = results.hits[0].meta.id
+
+            self.index.save(id=id, doc=data)
             logger.info("Authorized server:\n{}".format(json.dumps(data, indent=4, sort_keys=True)))
 
     def remove(self, server_id, direction):
-        if self._db.indices.exists(index=self._index):
-            s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+        if self.index.exists():
+            s = self.index.search()
             s = s.filter('term', server_id=server_id)
+
             if direction:
                 s = s.filter('term', direction=direction)
             results = s.execute()
 
             for hit in results:
                 id = hit.meta.id
-                self._db.delete(index=self._index, doc_type=self.TYPE_NAME, id=id)
+                self.index.delete(id=id)
                 logger.info("Deleted server:{} direction:{}".format(hit.server_id, hit.direction))
 
     def list(self):
-        if self._db.indices.exists(index=self._index):
-            s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+        if self.index.exists():
+            s = self.index.search()
             s = s.query('match_all')
             response = s.execute()
+
             print('\t'.join(self.FIELDS))
             for hit in response:
                 print('\t'.join([str(hit[field]) for field in self.FIELDS]))
 
     def verify(self, key):
-        if key and self._db.indices.exists(index=self._index):
-            s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
+        if key and self.index.exists():
+            s = self.index.search()
             s = s.filter('term', server_key=key)
             s = s.filter('term', direction='in')
             results = s.execute()
+
             if results.hits:
                 return results.hits[0]
 
 
 class PatientManager:
-    TYPE_NAME = 'patient'
-    INDEX_CONFIG = {
-        'mappings': {
-            TYPE_NAME: {
-                '_all': {
-                    'enabled': False,
-                },
-                'properties': {
-                    'phenotype': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'gene': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'doc': {
-                        'type': 'object',
-                        'enabled': False,
-                        'include_in_all': False,
-                    }
-                }
+    DOC_CONFIG = {
+        '_all': {
+            'enabled': False,
+        },
+        'properties': {
+            'phenotype': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'gene': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'doc': {
+                'type': 'object',
+                'enabled': False,
+                'include_in_all': False,
             }
         }
     }
 
-    def __init__(self, index='patients', backend=None):
+    def __init__(self, backend=None):
         if backend is None:
             backend = Elasticsearch()
 
-        self._db = backend
-        self._index = index
+        self._index = ESIndex(db=backend,
+                              name='patients',
+                              doc_type='patient',
+                              doc_config=self.DOC_CONFIG)
 
-    def index(self, filename):
+    @property
+    def index(self):
+        return self._index
+
+    def index_file(self, filename):
         """Populate the database with patient data from the given file"""
         from .models import Patient
 
@@ -176,8 +230,8 @@ class PatientManager:
             self.index_patient(patient)
 
         # Update index before returning record count
-        self._db.indices.refresh(index=self._index)
-        n = self._db.count(index=self._index, doc_type=self.TYPE_NAME)
+        self.index.refresh()
+        n = self.index.count()
         logger.info('Datastore now contains {} patient records'.format(n['count']))
 
     def index_patient(self, patient):
@@ -188,11 +242,7 @@ class PatientManager:
         id = patient.get_id()
         data = patient.to_index()
 
-        if not self._db.indices.exists(index=self._index):
-            logger.info("Creating patient ElasticSearch index: {!r}".format(self._index))
-            self._db.indices.create(index=self._index, body=self.INDEX_CONFIG)
-
-        self._db.index(index=self._index, doc_type=self.TYPE_NAME, id=id, body=data)
+        self.index.save(id=id, doc=data)
         logger.info("Indexed patient: {!r}".format(id))
 
     def match(self, phenotypes, genes, n=10):
@@ -209,47 +259,42 @@ class PatientManager:
         for gene_id in genes:
             query_parts.append(Q('match', gene=gene_id))
 
-        s = Search(using=self._db, index=self._index)
         query = Q('bool', should=query_parts)
-        s = s.query(query)
-        s = s[:n]
+        s = self.index.search()
+        s = s.query(query)[:n]
         response = s.execute()
         return response
 
 
 class VocabularyManager:
-    TERM_TYPE_NAME = 'term'
-    INDEX_CONFIG = {
-        'mappings': {
-            TERM_TYPE_NAME: {
-                '_all': {
-                    'enabled': False,
-                },
-                'properties': {
-                    'id': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'name': {
-                        'type': 'string',
-                    },
-                    'synonym': {
-                        'type': 'string',
-                    },
-                    'alt_id': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'is_a': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                    'term_category': {
-                        'type': 'string',
-                        'index': 'not_analyzed',
-                    },
-                }
-            }
+    DOC_TYPE = 'term'
+    DOC_CONFIG = {
+        '_all': {
+            'enabled': False,
+        },
+        'properties': {
+            'id': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'name': {
+                'type': 'string',
+            },
+            'synonym': {
+                'type': 'string',
+            },
+            'alt_id': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'is_a': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
+            'term_category': {
+                'type': 'string',
+                'index': 'not_analyzed',
+            },
         }
     }
 
@@ -258,22 +303,30 @@ class VocabularyManager:
             backend = Elasticsearch()
 
         self._db = backend
+        self._indices = {}
 
-    def index(self, index, filename, Parser):
+    def get_index(index):
+        index = self._indices.get(index)
+        if index is None:
+            index = ESIndex(db=self._db,
+                            name=index,
+                            doc_type=self.DOC_TYPE,
+                            doc_config=self.DOC_CONFIG)
+
+            index.create()
+
+        return index
+
+    def index_file(self, index, filename, Parser):
         """Index terms from the given file
 
-        :param index: the id of the index
+        :param index: the name of the index
         :param filename: the path to the vocabulary file
         :param Parser: the Parser class to use to parse the vocabulary file
         """
         parser = Parser(filename)
 
-        if self._db.indices.exists(index=index):
-            logger.warning('Vocabulary index already exists: {!r}'.format(index))
-        else:
-            logger.info("Creating index: {!r}".format(index))
-            self._db.indices.create(index=index, body=self.INDEX_CONFIG)
-
+        index = self.get_index(index)
         logger.info("Parsing vocabulary from: {!r}".format(filename))
         commands = []
         for term in parser:
@@ -285,22 +338,24 @@ class VocabularyManager:
             commands.extend(command)
 
         data = ''.join([json.dumps(command) + '\n' for command in commands])
-        self._db.bulk(data, index=index, doc_type=self.TERM_TYPE_NAME, refresh=True, request_timeout=60)
 
-        n = self._db.count(index=index, doc_type=self.TERM_TYPE_NAME)
+        index.bulk(data)
+
+        n = index.count()
         logger.info('Index now contains {} terms'.format(n['count']))
 
     def index_hpo(self, filename, index='hpo'):
-        return self.index(index=index, filename=filename, Parser=OBOParser)
+        return self.index_file(index=index, filename=filename, Parser=OBOParser)
 
     def index_genes(self, filename, index='genes'):
-        return self.index(index=index, filename=filename, Parser=GeneParser)
+        return self.index_file(index=index, filename=filename, Parser=GeneParser)
 
     def get_term(self, id, index='_all'):
         """Get vocabulary term by ID"""
-        s = Search(using=self._db, index=index, doc_type=self.TERM_TYPE_NAME)
+        s = Search(using=self._db, index=index, doc_type=self.DOC_TYPE)
         s = s.query(Q('term', id=id) | Q('term', alt_id=id))
         response = s.execute()
+
         if response.hits.total == 1:
             return response.hits[0].to_dict()
         else:

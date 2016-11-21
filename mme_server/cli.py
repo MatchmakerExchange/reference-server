@@ -61,7 +61,7 @@ def index_file(index, filename, url):
         index_funcs = {
             'hpo': backend.vocabularies.index_hpo,
             'genes': backend.vocabularies.index_genes,
-            'patients': backend.patients.index,
+            'patients': backend.patients.index_file,
         }
         index_funcs[index](filename=filename)
 
