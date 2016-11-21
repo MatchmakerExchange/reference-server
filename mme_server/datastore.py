@@ -62,6 +62,8 @@ class ServerManager:
         self._index = index
 
     def add(self, server_id, server_label, server_key, direction, base_url):
+        assert server_id and server_key and direction in ['in', 'out']
+
         if base_url and not base_url.startswith('https://'):
             logger.error('base URL must start with "https://"')
             return
@@ -70,22 +72,31 @@ class ServerManager:
             logger.info("Creating patient ElasticSearch index: {!r}".format(self._index))
             self._db.indices.create(index=self._index, body=self.INDEX_CONFIG)
 
+
+        data = {
+            'server_id': server_id,
+            'server_label': server_label,
+            'server_key': server_key,
+            'direction': direction,
+            'base_url': base_url,
+        }
+
         # If it already exists, update
         s = Search(using=self._db, index=self._index, doc_type=self.TYPE_NAME)
-        s = s.filter('term', server_id=data['server_id'])
-        s = s.filter('term', direction=data['direction'])
+        s = s.filter('term', server_id=server_id)
+        s = s.filter('term', direction=direction)
         results = s.execute()
         if results.hits.total == 1:
             # Found a match, so update instead
-            id = result.hits[0].meta.id
+            id = results.hits[0].meta.id
             self._db.index(index=self._index, doc_type=self.TYPE_NAME, id=id, body=data)
-            logger.info("Updated authorization server:{} direction:{}".format(data['server_id'], data['direction']))
+            logger.info("Updated authorization server:\n{}".format(json.dumps(data, indent=4, sort_keys=True)))
         elif results.hits.total:
             logger.error('Found two or more matching server entries')
         else:
             # Create a new server entry
             self._db.create(index=self._index, doc_type=self.TYPE_NAME, body=data)
-            logger.info("Authorized server:{} direction:{}".format(data['server_id'], data['direction']))
+            logger.info("Authorized server:\n{}".format(json.dumps(data, indent=4, sort_keys=True)))
 
     def remove(self, server_id, direction):
         if self._db.indices.exists(index=self._index):
@@ -116,7 +127,7 @@ class ServerManager:
             s = s.filter('term', direction='in')
             results = s.execute()
             if results.hits:
-                return result.hits[0]
+                return results.hits[0]
 
 
 class PatientManager:

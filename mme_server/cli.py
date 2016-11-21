@@ -8,6 +8,8 @@ import os
 import logging
 import unittest
 
+from binascii import hexlify
+
 from .compat import urlretrieve
 from .models import get_backend
 from .server import app
@@ -79,7 +81,7 @@ def list_servers():
         backend.servers.list()
 
 
-def add_server(id, key, direction, label=None, base_url=None):
+def add_server(id, direction, key=None, label=None, base_url=None):
     if not label:
         label = id
 
@@ -88,6 +90,9 @@ def add_server(id, key, direction, label=None, base_url=None):
 
     with app.app_context():
         backend = get_backend()
+        # Generate a random key if one was not provided
+        if key is None:
+            key = hexlify(os.urandom(30)).decode()
         backend.servers.add(server_id=id, server_key=key, direction=direction, server_label=label, base_url=base_url)
 
 
@@ -107,9 +112,9 @@ def add_auth_parser(parser):
     subparsers = auth_parser.add_subparsers(title='subcommands')
     subparser = subparsers.add_parser('add', description="Add server authorization")
     subparser.add_argument("id", help="A unique server identifier")
-    subparser.add_argument("key", help="The secret key used to authenticate requests to/from the server")
     subparser.add_argument("direction", choices=["in", "out"],
         help="Direction of server authorization, 'in': the other server can send requests, 'out': this server can send requests")
+    subparser.add_argument("--key", help="The secret key used to authenticate requests to/from the server (default: randomly generate a secure key)")
     subparser.add_argument("--label", help="The display name for the server ")
     subparser.add_argument("--base-url", dest="base_url", help="The base URL for sending API requests to the other server (e.g., <base-url>/match should be a valid endpoint). Must be specified for outgoing requests")
     subparser.set_defaults(function=add_server)

@@ -35,7 +35,7 @@ def match():
         return response
 
     logger.info("Authorizing request")
-    token = response.headers['X-Auth-Token']
+    token = request.headers['X-Auth-Token']
     db = get_backend()
     server = db.servers.verify(token)
     if not server:
