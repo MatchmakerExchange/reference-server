@@ -1,5 +1,5 @@
 # Matchmaker Exchange Reference Server
-[![Build Status](https://api.travis-ci.org/MatchmakerExchange/reference-server.svg)](https://travis-ci.org/MatchmakerExchange/reference-server)
+[![Build Status](https://travis-ci.org/MatchmakerExchange/reference-server.svg?branch=master)](https://travis-ci.org/MatchmakerExchange/reference-server)
 [![License](https://img.shields.io/github/license/MatchmakerExchange/reference-server.svg)](LICENSE.txt)
 [![Coverage Status](https://img.shields.io/coveralls/MatchmakerExchange/reference-server/master.svg)](https://coveralls.io/github/MatchmakerExchange/reference-server?branch=master)
 
