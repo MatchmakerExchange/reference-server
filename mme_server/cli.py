@@ -78,7 +78,13 @@ def fetch_resource(filename, url):
 def list_servers():
     with app.app_context():
         backend = get_backend()
-        backend.servers.list()
+        response = backend.servers.list()
+        # print header
+        fields = response['fields']
+        print('\t'.join(fields))
+
+        for server in response.get('rows', []):
+            print('\t'.join([repr(server[field]) for field in fields]))
 
 
 def add_server(id, direction, key=None, label=None, base_url=None):

@@ -8,8 +8,9 @@ from __future__ import with_statement, division, unicode_literals
 
 import logging
 
-from flask import Flask, request, after_this_request, jsonify
+from flask import Flask, request, after_this_request, jsonify, render_template
 from flask_negotiate import consumes, produces
+from collections import defaultdict
 
 from .models import MatchRequest, get_backend
 from .schemas import validate_request, validate_response, ValidationError
@@ -22,6 +23,26 @@ app = Flask(__name__.split('.')[0])
 # Logger
 logger = logging.getLogger(__name__)
 
+def get_outgoing_servers():
+    db = get_backend()
+    response = db.servers.list()
+    servers = {}
+    for server in response.get('rows', []):
+        if server.get('direction') == 'out':
+            id = server['server_id']
+            label = server['server_label']
+            base_url = server['base_url']
+            entry = servers.setdefault(id, {})
+            entry['label'] = entry.get('label') or label
+            entry['base_url'] = entry.get('base_url') or base_url
+
+    return servers
+
+@app.route('/', methods=['GET'])
+@produces('text/html')
+def index():
+    servers = get_outgoing_servers()
+    return render_template('index.html', servers=servers)
 
 @app.route('/match', methods=['POST'])
 @consumes(API_MIME_TYPE, 'application/json')
@@ -42,6 +63,9 @@ def match():
         response = jsonify(message='X-Auth-Token not authorized')
         response.status_code = 401
         return response
+
+    # servers = request.args.get('servers')
+    # timeout = request.args.get('timeout', 5000)
 
     logger.info("Getting flask request data")
     request_json = request.get_json(force=True)

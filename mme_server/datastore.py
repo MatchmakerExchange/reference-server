@@ -163,14 +163,20 @@ class ServerManager:
                 logger.info("Deleted server:{} direction:{}".format(hit.server_id, hit.direction))
 
     def list(self):
+        rows = []
         if self.index.exists():
             s = self.index.search()
             s = s.query('match_all')
             response = s.execute()
 
-            print('\t'.join(self.FIELDS))
             for hit in response:
-                print('\t'.join([str(hit[field]) for field in self.FIELDS]))
+                row = dict([(field, hit[field]) for field in self.FIELDS])
+                rows.append(row)
+
+        return {
+            'fields': self.FIELDS,
+            'rows': rows
+        }
 
     def verify(self, key):
         if key and self.index.exists():

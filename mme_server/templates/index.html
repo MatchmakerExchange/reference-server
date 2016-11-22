@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DCC Large File Upload</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+</head>
+<body>
+    <header><h1 class="text-center" style="padding-bottom: 25px">The Exchange <small>for Matchmakers</small></h1></header>
+    <a href="https://github.com/MatchmakerExchange/reference-server"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+    <div class="container">
+        <section class="row col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+            <h2 class="text-center">Summary</h2>
+            <div class="panel panel-default">
+                <!-- <div class="panel-heading">
+                    Connected Servers
+                </div> -->
+                <div class="panel-body">
+                    <ol>
+                        <li>Make an authenticated MME API request to this service</li>
+                        <li>If you don't want to query all services, you can specify a subset</li>
+                        <li>Receive a combined response, containing matches from all services</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section class="row col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+            <h2 class="text-center">Features</h2>
+            <div class="panel panel-default">
+                <!-- <div class="panel-heading">
+                    Connected Servers
+                </div> -->
+                <div class="panel-body">
+                    <ol>
+                        <li>Authenticates the requesting service</li>
+                        <li>Validates requests and responses conform to the <a href="https://github.com/MatchmakerExchange/reference-server/blob/master/mme_server/schemas/api.json">the MME API jsonschema specification</a></li>
+                        <li>Normalizes request ontologies:
+                            <ul>
+                                <li>maps gene symbols and Entrez IDs to Ensembl IDs</li>
+                                <li>resolves HPO synonyms</li>
+                            </ul>
+                        <li>Enables new services to be queried by the entire MME with only a single key exchange</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+        <section class="row col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+            <h2 class="text-center">Connected Servers</h2>
+            <div class="panel panel-default">
+                <!-- <div class="panel-heading">
+                    Connected Servers
+                </div> -->
+                <!-- <div class="panel-body">
+                </div> -->
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Server ID</th>
+                        <th>Server Name</th>
+                        <th>Base URL</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for id, server in servers|dictsort %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ id }}</td>
+                        <td>{{ server.label }}</td>
+                        <td>{{ server.base_url }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                    <caption style="caption-side: bottom">To get a server added to this list, just <a href="https://github.com/MatchmakerExchange/reference-server/issues/new">create an issue</a>.</caption>
+                </table>
+            </div>
+        </section>
+
+        <section class="row col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+            <h2 class="text-center">Usage</h2>
+            <pre>
+curl -X POST \
+    -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
+    -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
+    -d '{
+          "patient": {
+            "id":"1",
+            "contact": {"name": "Jane Doe", "href": "mailto:jdoe@example.edu"},
+            "features": [{"id": "HP:0000522"}],
+            "genomicFeatures": [{"gene": {"id": "NGLY1"}}],
+            "test": true
+          }
+        }' \
+    https://x.matchmakerexchange.org/v1/match?servers=pc,gm&timeout=1000
+            </pre>
+        </section>
+
+        <!-- Footer row -->
+        <footer class="row col-sm-10 col-sm-offset-1" style="padding-top: 25px; padding-bottom: 25px">
+            <div class="footer text-center">
+                <a href="https://github.com/MatchmakerExchange/"><span class="fa fa-github"></span> MatchmakerExchange</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+            integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+            crossorigin="anonymous"></script>
+</body>
+</html>
