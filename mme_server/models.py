@@ -167,6 +167,11 @@ class MatchRequest:
         patient = Patient.from_api(request['patient'])
         return cls(patient)
 
+    def to_api(self):
+        return {
+            'patient': self.patient.to_api()
+        }
+
     def match(self, n=5):
         backend = get_backend()
 

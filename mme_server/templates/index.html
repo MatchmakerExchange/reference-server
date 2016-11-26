@@ -68,20 +68,24 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ id }}</td>
-                        <td>{{ server.label }}</td>
+                        <td>{{ server.server_label }}</td>
                         <td>{{ server.base_url }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
-                    <caption style="caption-side: bottom">To get a server added to this list, just <a href="https://github.com/MatchmakerExchange/reference-server/issues/new">create an issue</a>.</caption>
+                    <caption style="caption-side: bottom">To request a server be added to this list, just <a href="https://github.com/MatchmakerExchange/reference-server/issues/new">create an issue</a>.</caption>
                 </table>
             </div>
         </section>
 
         <section class="row col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
             <h2 class="text-center">Usage</h2>
-            <pre>
+            <div class="panel panel-default">
+                <div class="panel-body">
+                    <h3>Make a request to a specific server: <code>pc</code></h3>
+                    <pre>
 curl -X POST \
+    -H 'X-Auth-Token: &lt;your-exchange-server-auth-token&gt;' \
     -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
     -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
     -d '{
@@ -93,8 +97,42 @@ curl -X POST \
             "test": true
           }
         }' \
-    https://x.matchmakerexchange.org/v1/match?servers=pc,gm&timeout=1000
-            </pre>
+    https://x.matchmakerexchange.org/v1/servers/pc/match
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <section class="row col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+            <h2 class="text-center">Statistics</h2>
+            <div class="panel panel-default">
+                <!-- <div class="panel-heading">
+                    Connected Servers
+                </div> -->
+                <!-- <div class="panel-body">
+                </div> -->
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Server ID</th>
+                        <th>Server Name</th>
+                        <th>Base URL</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for id, server in servers|dictsort %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ id }}</td>
+                        <td>{{ server.server_label }}</td>
+                        <td>{{ server.base_url }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                    <caption style="caption-side: bottom">To get a server added to this list, just <a href="https://github.com/MatchmakerExchange/reference-server/issues/new">create an issue</a>.</caption>
+                </table>
+            </div>
         </section>
 
         <!-- Footer row -->

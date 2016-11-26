@@ -44,6 +44,7 @@ setup(
     classifiers=CLASSIFIERS,
     install_requires=INSTALL_REQUIRES,
     include_package_data=True,
+    zip_safe=False,
     test_suite='mme_server.tests',
     entry_points={
         'console_scripts': [

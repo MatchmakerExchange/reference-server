@@ -7,6 +7,7 @@ used in a production setting.
 from __future__ import with_statement, division, unicode_literals
 
 import logging
+import json
 
 from flask import Flask, request, after_this_request, jsonify, render_template
 from flask_negotiate import consumes, produces
@@ -20,7 +21,7 @@ API_MIME_TYPE = 'application/vnd.ga4gh.matchmaker.v1.0+json'
 
 # Global flask application
 app = Flask(__name__.split('.')[0])
-app.config['DEBUG'] = True
+app.config['DEBUG'] = False
 app.config['MME_PROXY_REQUESTS'] = True
 app.config['MME_SERVE_STATIC_PAGES'] = True
 
@@ -39,11 +40,12 @@ def get_outgoing_servers():
     servers = {}
     for server in response.get('rows', []):
         if server.get('direction') == 'out':
-            servers[id] = server
+            server_id = server['server_id']
+            servers[server_id] = server
 
     return servers
 
-def authenticate_request(request):
+def authenticate():
     logger.info("Authenticating request")
     token = request.headers.get('X-Auth-Token')
     db = get_backend()
@@ -51,7 +53,7 @@ def authenticate_request(request):
     if not server:
         raise InvalidXAuthToken()
 
-def send_request(server, request, timeout):
+def send_request(server, request_data, timeout):
     try:
         from urllib2 import urlopen, Request
     except ImportError:
@@ -60,37 +62,44 @@ def send_request(server, request, timeout):
     base_url = server['base_url']
     assert base_url.startswith('https://')
 
-    url = '{}/{}'.format(base_url, match)
-    headers = [
-        ('User-Agent', 'exchange-of-matchmakers/0.1'),
-        ('Content-Type', API_MIME_TYPE),
-        ('Accept', API_MIME_TYPE),
-    ]
+    url = '{}/match'.format(base_url)
+    headers = {
+        'User-Agent': 'exchange-of-matchmakers/0.1',
+        'Content-Type': API_MIME_TYPE,
+        'Accept': API_MIME_TYPE,
+    }
 
     auth_token = server.get('server_key')
     if auth_token:
-        headers.append(('X-Auth-Token', auth_token))
+        headers['X-Auth-Token'] = auth_token
 
-    req = Request(url, data=request, headers=headers)
+    print("Opening request to URL: " + url)
+    req = Request(url, data=request_data, headers=headers)
     handler = urlopen(req)
-    response = handler.read()
-    return response
+    print("Loading response")
+    response = handler.readall().decode('utf-8')
+    response_json = json.loads(response)
+    print("Loaded response: {!r}".format(response_json))
+    return response_json
 
-def proxy_request(request, timeout=5):
+def proxy_request(request_data, timeout=5, server_ids=None):
     from multiprocessing import Pool
 
     db = get_backend()
-    response = db.servers.list()
+    all_servers = db.servers.list().get('rows', [])
 
-    servers = response.get('rows', [])
-    is_outgoing = lambda server: server.get('direction') == 'out'
-    servers = filter(is_outgoing, servers)
+    servers = []
+    for server in all_servers:
+        if (server.get('direction') == 'out' and
+            (not server_ids or server['server_id'] in server_ids)):
+            servers.append(server)
+
     if servers:
-        pool = Pool(processes=3)
+        pool = Pool(processes=4)
 
         handles = []
         for server in servers:
-            handle = pool.apply_async(send_request, (server, request, timeout))
+            handle = pool.apply_async(send_request, (server, request_data, timeout))
             handles.append((server, handle))
 
     results = []
@@ -100,6 +109,9 @@ def proxy_request(request, timeout=5):
         except TimeoutError:
             print('Timed out')
             result = None
+        except Exception as e:
+            print('Other error: {}'.format(e))
+            continue
 
         results.append((server, result))
     return results
@@ -115,7 +127,7 @@ def index():
     servers = get_outgoing_servers()
     return render_template('index.html', servers=servers)
 
-@app.route('/match', methods=['POST'])
+@app.route('/v1/match', methods=['POST'])
 @consumes(API_MIME_TYPE, 'application/json')
 @produces(API_MIME_TYPE)
 def match():
@@ -127,9 +139,9 @@ def match():
         return response
 
     try:
-        authenticate_request(request)
+        authenticate()
 
-        timeout = request.args.get('timeout', 5000)
+        timeout = int(request.args.get('timeout', 5))
 
         logger.info("Getting flask request data")
         request_json = request.get_json(force=True)
@@ -165,10 +177,10 @@ def match():
         return response
 
 
-@app.route('/servers/:server/match', methods=['POST'])
+@app.route('/v1/servers/<server_id>/match', methods=['POST'])
 @consumes(API_MIME_TYPE, 'application/json')
 @produces(API_MIME_TYPE)
-def match():
+def match_server(server_id):
     """Proxy the match request to server :server"""
     if not app.config.get('MME_SERVE_STATIC_PAGES'):
         response = jsonify(message='Not Found')
@@ -181,9 +193,10 @@ def match():
         return response
 
     try:
-        authenticate_request(request)
+        authenticate()
 
-        timeout = request.args.get('timeout', 5000)
+        timeout = int(request.args.get('timeout', 5))
+        timeout = int(request.args.get('timeout', 5))
 
         logger.info("Getting flask request data")
         request_json = request.get_json(force=True)
@@ -199,13 +212,13 @@ def match():
         logger.info("Parsing query")
         request_obj = MatchRequest.from_api(request_json)
 
-        logger.info("Finding similar patients")
-        response_obj = request_obj.match(n=5)
+        logger.info("Preparing request")
+        request_data = json.dumps(request_obj.to_api()).encode('utf-8')
 
-        logger.info("Serializing response")
-        response_json = response_obj.to_api()
-
-        logger.info("Validate response syntax")
+        logger.info("Proxying request")
+        server_responses = proxy_request(request_data, timeout=timeout, server_ids=[server_id])
+        response_json = server_responses[0][1]
+        logger.info("Validating response syntax")
         try:
             validate_response(response_json)
         except ValidationError as e:
