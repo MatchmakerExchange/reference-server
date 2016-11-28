@@ -177,7 +177,7 @@
         "contact"
       ],
       "patternProperties": {
-        "^_[a-zA-Z0-9_-]*$": {}
+        "^_": {}
       },
       "additionalProperties": false,
       "not": {
@@ -203,7 +203,7 @@
         "patient"
       ],
       "patternProperties": {
-        "^_[a-zA-Z0-9_-]*$": {}
+        "^_": {}
       },
       "additionalProperties": false
     },

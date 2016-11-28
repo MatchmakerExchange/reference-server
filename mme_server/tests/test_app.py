@@ -150,8 +150,6 @@ class DatastoreTests(TestCase):
 
 class MatchRequestTests(TestCase):
     def setUp(self):
-        from mme_server.server import app
-        self.app = app
         self.request = deepcopy(EXAMPLE_REQUEST)
 
     def assertValidRequest(self, data):
@@ -194,18 +192,32 @@ class MatchRequestTests(TestCase):
 class FlaskTests(unittest.TestCase):
     def setUp(self):
         from mme_server.server import app
+        from mme_server.cli import add_server
 
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
+        self.auth_token = 'mysecretauthtoken'
+        self.test_server_id = 'test_server_id'
+        add_server(self.test_server_id, 'in', key=self.auth_token)
+
         self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.content_type_header = ('Content-Type', 'application/json')
-        self.headers = [self.accept_header, self.content_type_header]
+        self.auth_token_header = ('X-Auth-Token', self.auth_token)
+        self.headers = [
+            self.accept_header,
+            self.content_type_header,
+            self.auth_token_header,
+        ]
+
+    def tearDown(self):
+        from mme_server.cli import remove_server
+        remove_server(self.test_server_id, 'in')
 
     def assertValidResponse(self, data):
         validate_response(data)
 
     def test_match_request(self):
-        response = self.client.post('/match', data=self.data, headers=self.headers)
+        response = self.client.post('/v1/match', data=self.data, headers=self.headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertValidResponse(json.loads(response.get_data(as_text=True)))
@@ -213,31 +225,47 @@ class FlaskTests(unittest.TestCase):
     def test_accept_header_required(self):
         headers = self.headers
         headers.remove(self.accept_header)
-        response = self.client.post('/match', data=self.data, headers=headers)
+        response = self.client.post('/v1/match', data=self.data, headers=headers)
         self.assertEqual(response.status_code, 406)
 
     def test_content_type_required(self):
         headers = self.headers
         headers.remove(self.content_type_header)
-        response = self.client.post('/match', data=self.data, headers=headers)
+        response = self.client.post('/v1/match', data=self.data, headers=headers)
         self.assertEqual(response.status_code, 415)
 
     def test_invalid_query(self):
-        response = self.client.post('/match', data='{}', headers=self.headers)
+        response = self.client.post('/v1/match', data='{}', headers=self.headers)
         self.assertEqual(response.status_code, 422)
         self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
 
 
 class EndToEndTests(unittest.TestCase):
+    def setUp(self):
+        from mme_server.cli import add_server
+        self.auth_token = 'mysecretauthtoken'
+        self.test_server_id = 'test_server_id'
+        add_server(self.test_server_id, 'in', key=self.auth_token)
+
+        self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.content_type_header = ('Content-Type', 'application/json')
+        self.auth_token_header = ('X-Auth-Token', self.auth_token)
+        self.headers = [
+            self.accept_header,
+            self.content_type_header,
+            self.auth_token_header,
+        ]
+
+    def tearDown(self):
+        from mme_server.cli import remove_server
+        remove_server(self.test_server_id, 'in')
+
     def test_query(self):
         from mme_server.server import app
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
-        self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.content_type_header = ('Content-Type', 'application/json')
-        self.headers = [self.accept_header, self.content_type_header]
 
-        response = self.client.post('/match', data=self.data, headers=self.headers)
+        response = self.client.post('/v1/match', data=self.data, headers=self.headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         response_data = json.loads(response.get_data(as_text=True))

@@ -10,6 +10,8 @@ from jsonschema import validate, RefResolver, FormatChecker, ValidationError as 
 SCHEMA_FILE = 'api.json'
 REQUEST_SCHEMA = '#/definitions/request'
 RESPONSE_SCHEMA = '#/definitions/response'
+
+# Make ValidationError available for other modules to import
 ValidationError = BaseValidationError
 
 
@@ -33,4 +35,3 @@ def validate_request(data):
 
 def validate_response(data):
     validate_subschema(data, RESPONSE_SCHEMA)
-
