@@ -311,11 +311,11 @@ class VocabularyManager:
         self._db = backend
         self._indices = {}
 
-    def get_index(index):
-        index = self._indices.get(index)
+    def get_index(self, index_name):
+        index = self._indices.get(index_name)
         if index is None:
             index = ESIndex(db=self._db,
-                            name=index,
+                            name=index_name,
                             doc_type=self.DOC_TYPE,
                             doc_config=self.DOC_CONFIG)
 
@@ -323,16 +323,16 @@ class VocabularyManager:
 
         return index
 
-    def index_file(self, index, filename, Parser):
+    def index_file(self, index_name, filename, Parser):
         """Index terms from the given file
 
-        :param index: the name of the index
+        :param index_name: the name of the index
         :param filename: the path to the vocabulary file
         :param Parser: the Parser class to use to parse the vocabulary file
         """
         parser = Parser(filename)
 
-        index = self.get_index(index)
+        index = self.get_index(index_name)
         logger.info("Parsing vocabulary from: {!r}".format(filename))
         commands = []
         for term in parser:
@@ -351,10 +351,10 @@ class VocabularyManager:
         logger.info('Index now contains {} terms'.format(n['count']))
 
     def index_hpo(self, filename, index='hpo'):
-        return self.index_file(index=index, filename=filename, Parser=OBOParser)
+        return self.index_file(index_name=index, filename=filename, Parser=OBOParser)
 
     def index_genes(self, filename, index='genes'):
-        return self.index_file(index=index, filename=filename, Parser=GeneParser)
+        return self.index_file(index_name=index, filename=filename, Parser=GeneParser)
 
     def get_term(self, id, index='_all'):
         """Get vocabulary term by ID"""
