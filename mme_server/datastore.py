@@ -76,7 +76,9 @@ class ESIndex:
     def bulk(self, data, refresh=True, request_timeout=60, **args):
         # Ensure the index exists
         self.ensure_exists()
-        return self._db.bulk(data, index=self._name, doc_type=self._doc_type)
+        self._db.bulk(data, index=self._name, doc_type=self._doc_type)
+        if refresh:
+            self.refresh()
 
 
 class ServerManager:
@@ -152,6 +154,8 @@ class ServerManager:
 
             self.index.save(id=id, doc=data)
             logger.info("Authorized server:\n{}".format(json.dumps(data, indent=4, sort_keys=True)))
+            # Refresh index to ensure immediately usable
+            self.index.refresh()
 
     def remove(self, server_id, direction):
         if self.index.exists():
@@ -172,9 +176,9 @@ class ServerManager:
         if self.index.exists():
             s = self.index.search()
             s = s.query('match_all')
-            response = s.execute()
 
-            for hit in response:
+            # Iterate through all, using scan
+            for hit in s.scan():
                 row = dict([(field, hit[field]) for field in self.FIELDS])
                 rows.append(row)
 

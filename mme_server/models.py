@@ -181,7 +181,7 @@ class MatchRequest:
 
         matches = []
         for hit in hits[:n]:
-            match = MatchResult(self.patient, hit)
+            match = MatchResult.from_index(hit)
             matches.append(match)
 
         matches.sort(reverse=True)
@@ -190,25 +190,33 @@ class MatchRequest:
 
 class MatchResult:
     """A simple match view that uses the ElasticSearch score directly"""
-    def __init__(self, query_patient, hit):
-        self.query_patient = query_patient
-
+    def __init__(self, patient, score):
         # Parse the patient from the matched doc
-        self.match_patient = Patient.from_index(hit)
+        self.patient = patient
 
         # Score the match
-        self.hit = hit
-        self.score = self.get_score()
+        self.score = score
 
         # Serialize for API
         self.data = {
             'score': {'patient': self.score},
-            'patient': self.match_patient.to_api(),
+            'patient': self.patient.to_api(),
         }
 
-    def get_score(self):
+    @classmethod
+    def from_api(cls, request):
+        patient = Patient.from_api(request['patient'])
+        score = float(request['score']['patient'])
+        return cls(patient, score)
+
+    @classmethod
+    def from_index(cls, hit):
+        # Parse the patient from the matched doc
+        patient = Patient.from_index(hit)
+
         # Use the ElasticSearch TF/IDF score, normalized to [0, 1]
-        return 1 - 1 / (1 + float(self.hit.meta.score))
+        score = 1 - 1 / (1 + float(hit.meta.score))
+        return cls(patient, score)
 
     def to_api(self):
         return self.data
@@ -223,6 +231,14 @@ class MatchResponse:
         self.data = {
             'results': [match.to_api() for match in matches],
         }
+
+    @classmethod
+    def from_api(cls, request):
+        matches = []
+        for result in request['results']:
+            matches.append(MatchResult.from_api(result))
+
+        return cls(matches)
 
     def to_api(self):
         return self.data
