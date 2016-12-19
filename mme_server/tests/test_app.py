@@ -183,11 +183,11 @@ class MatchRequestTests(TestCase):
     def test_query_schema_complete(self):
         self.assertValidRequest(self.request)
 
-    def test_query_schema_extra_fields_must_start_with_underscore(self):
+    def test_query_schema_extra_fields_allowed(self):
         self.request['patient']['_foo'] = 'bar'
         self.assertValidRequest(self.request)
         self.request['patient']['foo'] = 'bar'
-        self.assertNotValidRequest(self.request)
+        self.assertValidRequest(self.request)
 
 
 class FlaskTests(unittest.TestCase):

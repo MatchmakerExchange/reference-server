@@ -176,10 +176,6 @@
         "id",
         "contact"
       ],
-      "patternProperties": {
-        "^_": {}
-      },
-      "additionalProperties": false,
       "not": {
         "properties": {
           "features": {
@@ -201,11 +197,7 @@
       },
       "required": [
         "patient"
-      ],
-      "patternProperties": {
-        "^_": {}
-      },
-      "additionalProperties": false
+      ]
     },
 
     "response": {
