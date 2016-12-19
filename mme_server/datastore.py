@@ -48,7 +48,8 @@ class ESIndex:
             self.create()
 
     def search(self):
-        return Search(using=self._db, index=self._name, doc_type=self._doc_type)
+        if self.exists():
+            return Search(using=self._db, index=self._name, doc_type=self._doc_type)
 
     def save(self, doc, id=None):
         """Create a new document if id is None, else update"""
@@ -65,12 +66,16 @@ class ESIndex:
             self._db.delete(index=self._name, doc_type=self._doc_type, id=id)
 
     def refresh(self):
-        self._db.indices.refresh(index=self._name)
+        if self.exists():
+            self._db.indices.refresh(index=self._name)
 
     def count(self):
-        self._db.count(index=self._name, doc_type=self._doc_type)
+        if self.exists():
+            self._db.count(index=self._name, doc_type=self._doc_type)
 
     def bulk(self, data, refresh=True, request_timeout=60, **args):
+        # Ensure the index exists
+        self.ensure_exists()
         self._db.bulk(data, index=self._name, doc_type=self._doc_type)
 
 
@@ -318,8 +323,6 @@ class VocabularyManager:
                             name=index_name,
                             doc_type=self.DOC_TYPE,
                             doc_config=self.DOC_CONFIG)
-
-            index.create()
 
         return index
 

@@ -9,7 +9,7 @@ from __future__ import with_statement, division, unicode_literals
 import logging
 import json
 
-from flask import Flask, request, after_this_request, jsonify, render_template
+from flask import Flask, request, after_this_request, jsonify
 from flask_negotiate import consumes, produces
 from collections import defaultdict
 from werkzeug.exceptions import BadRequest
