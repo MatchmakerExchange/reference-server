@@ -66,7 +66,6 @@ def match():
         validate_request(request_json)
     except ValidationError as e:
         error = jsonify(message='Request does not conform to API specification',
-                        error=e,
                         request=request_json)
         error.status_code = 422
         return error
@@ -83,7 +82,7 @@ def match():
     try:
         logger.info("Validating response syntax")
         validate_response(response_json)
-    except ResponseValidationError as e:
+    except ValidationError as e:
         # log to console and return response anyway
         logger.error('Response does not conform to API specification:\n{}\n\nResponse:\n{}'.format(e, response_json))
 

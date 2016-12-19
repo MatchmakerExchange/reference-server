@@ -4,6 +4,7 @@ import unittest
 
 from copy import deepcopy
 from unittest import TestCase
+from random import randint
 
 from elasticsearch import Elasticsearch
 
@@ -197,7 +198,7 @@ class FlaskTests(unittest.TestCase):
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
         self.auth_token = 'mysecretauthtoken'
-        self.test_server_id = 'test_server_id'
+        self.test_server_id = 'test_server_{}'.format(randint(0, 1000000))
         add_server(self.test_server_id, 'in', key=self.auth_token)
 
         self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
@@ -244,7 +245,7 @@ class EndToEndTests(unittest.TestCase):
     def setUp(self):
         from mme_server.cli import add_server
         self.auth_token = 'mysecretauthtoken'
-        self.test_server_id = 'test_server_id'
+        self.test_server_id = 'test_server_{}'.format(randint(0, 1000000))
         add_server(self.test_server_id, 'in', key=self.auth_token)
 
         self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
@@ -264,7 +265,6 @@ class EndToEndTests(unittest.TestCase):
         from mme_server.server import app
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
-
         response = self.client.post('/v1/match', data=self.data, headers=self.headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
