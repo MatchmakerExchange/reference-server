@@ -11,6 +11,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 
 
 ## Dependencies
+
 - Python 2.7 or 3.3+
 - ElasticSearch 1.7 (to match Travis-CI)
 
@@ -51,8 +52,10 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 1. Authorize an incoming server:
 
     ```sh
-    mme-server auth add myserver in --key myauthtoken
+    mme-server auth add client_server in --label "My Client" --key "<CLIENT_AUTH_TOKEN>"
     ```
+
+    Leave off the `--key` option to have a secure key randomly generated for you.
 
 1. Start up MME reference server:
 
@@ -65,16 +68,17 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 1. Try it out:
 
     ```sh
-    curl -XPOST -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
-         -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
-         -H 'X-Auth-Token: myauthtoken' \
-         -d '{"patient":{
+    curl -XPOST \
+      -H 'X-Auth-Token: <CLIENT_AUTH_TOKEN>' \
+      -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
+      -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
+      -d '{"patient":{
         "id":"1",
         "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"},
         "features":[{"id":"HP:0000522"}],
         "genomicFeatures":[{"gene":{"id":"NGLY1"}}],
         "test": true
-      }}' localhost:8000/match
+      }}' localhost:8000/v1/match
     ```
 
 ## Installation
