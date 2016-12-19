@@ -12,7 +12,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 
 ## Dependencies
 - Python 2.7 or 3.3+
-- ElasticSearch
+- ElasticSearch 1.7 (to match Travis-CI)
 
 
 ## Quickstart
@@ -72,7 +72,8 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
         "id":"1",
         "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"},
         "features":[{"id":"HP:0000522"}],
-        "genomicFeatures":[{"gene":{"id":"NGLY1"}}]
+        "genomicFeatures":[{"gene":{"id":"NGLY1"}}],
+        "test": true
       }}' localhost:8000/match
     ```
 
@@ -100,14 +101,14 @@ source .virtualenv/bin/activate
 First, download elasticsearch:
 
 ```sh
-wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.1.1/elasticsearch-2.1.1.tar.gz
-tar -xzf elasticsearch-2.1.1.tar.gz
+wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.6.zip
+unzip elasticsearch-1.7.6.zip
 ```
 
 Then, start up a local elasticsearch cluster to serve as our database (`-Des.path.data=data` puts the elasticsearch indices in a subdirectory called `data`):
 
 ```sh
-./elasticsearch-2.1.1/bin/elasticsearch -Des.path.data=data
+./elasticsearch-1.7.6/bin/elasticsearch -Des.path.data=data
 ```
 
 
