@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import request, jsonify
+from flask import request, jsonify, g
 
 from .models import get_backend
 
@@ -21,6 +21,7 @@ def auth_token_required():
                 error.status_code = 401
                 return error
 
+            g.server = server
             return f(*args, **kwargs)
         return decorated_function
     return decorator

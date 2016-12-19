@@ -29,19 +29,6 @@ app = Flask(__name__.split('.')[0])
 # Logger
 logger = logging.getLogger(__name__)
 
-class InvalidXAuthToken(Exception):
-    pass
-
-def authenticate_request(request):
-    logger.info("Authenticating request")
-    token = request.headers.get('X-Auth-Token')
-    db = get_backend()
-    server = db.servers.verify(token)
-    if not server:
-        raise InvalidXAuthToken()
-
-    return server
-
 
 @app.route('/v1/match', methods=['POST'])
 @consumes(API_MIME_TYPE, 'application/json')

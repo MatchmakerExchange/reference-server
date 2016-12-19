@@ -240,6 +240,12 @@ class FlaskTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
 
+    def test_unauthenticated(self):
+        self.headers.remove(self.auth_token_header)
+        response = self.client.post('/v1/match', data='{}', headers=self.headers)
+        self.assertEqual(response.status_code, 401)
+        self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
+
 
 class EndToEndTests(unittest.TestCase):
     def setUp(self):

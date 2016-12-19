@@ -11,9 +11,10 @@ DOWNLOAD_URL = '{}/tarball/{}'.format(URL, VERSION)
 INSTALL_REQUIRES = [
     'Flask>=0.10.1',
     'Flask-Negotiate',
-    # Use package versions for elasticserach 1.X
+    # Use package versions for elasticserach 2.X
     # 'elasticsearch>=2.0.0,<3.0.0',
     # 'elasticsearch-dsl>=2.0.0,<3.0.0',
+    # Use package versions for elasticserach 1.X
     'elasticsearch>=1.0.0,<2.0.0',
     'elasticsearch-dsl>=0.0.0,<1.0.0',
     'rdflib',
