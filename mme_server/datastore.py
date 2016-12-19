@@ -45,7 +45,7 @@ class ESIndex:
 
     def ensure_exists(self):
         if not self.exists():
-            self.create()
+            return self.create()
 
     def search(self):
         if self.exists():
@@ -57,26 +57,26 @@ class ESIndex:
         self.ensure_exists()
 
         if id is None:
-            self._db.create(index=self._name, doc_type=self._doc_type, body=doc)
+            return self._db.create(index=self._name, doc_type=self._doc_type, body=doc)
         else:
-            self._db.index(index=self._name, doc_type=self._doc_type, id=id, body=doc)
+            return self._db.index(index=self._name, doc_type=self._doc_type, id=id, body=doc)
 
     def delete(self, id, index=None):
         if self.exists():
-            self._db.delete(index=self._name, doc_type=self._doc_type, id=id)
+            return self._db.delete(index=self._name, doc_type=self._doc_type, id=id)
 
     def refresh(self):
         if self.exists():
-            self._db.indices.refresh(index=self._name)
+            return self._db.indices.refresh(index=self._name)
 
     def count(self):
         if self.exists():
-            self._db.count(index=self._name, doc_type=self._doc_type)
+            return self._db.count(index=self._name, doc_type=self._doc_type)
 
     def bulk(self, data, refresh=True, request_timeout=60, **args):
         # Ensure the index exists
         self.ensure_exists()
-        self._db.bulk(data, index=self._name, doc_type=self._doc_type)
+        return self._db.bulk(data, index=self._name, doc_type=self._doc_type)
 
 
 class ServerManager:
@@ -243,7 +243,7 @@ class PatientManager:
         # Update index before returning record count
         self.index.refresh()
         n = self.index.count()
-        logger.info('Datastore now contains {} patient records'.format(n['count']))
+        logger.info('Datastore now contains {} patient records'.format(n))
 
     def index_patient(self, patient):
         """Index the provided models.Patient object
@@ -351,7 +351,7 @@ class VocabularyManager:
         index.bulk(data)
 
         n = index.count()
-        logger.info('Index now contains {} terms'.format(n['count']))
+        logger.info('Index now contains {} terms'.format(n))
 
     def index_hpo(self, filename, index='hpo'):
         return self.index_file(index_name=index, filename=filename, Parser=OBOParser)
