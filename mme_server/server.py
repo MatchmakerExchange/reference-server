@@ -40,30 +40,6 @@ def authenticate_request(request):
     if not server:
         raise InvalidXAuthToken()
 
-def send_request(server, request_data, timeout):
-    base_url = server['base_url']
-    assert base_url.startswith('https://')
-
-    url = '{}/match'.format(base_url)
-    headers = {
-        'User-Agent': 'mme-server/0.2',
-        'Content-Type': API_MIME_TYPE,
-        'Accept': API_MIME_TYPE,
-    }
-
-    auth_token = server.get('server_key')
-    if auth_token:
-        headers['X-Auth-Token'] = auth_token
-
-    print("Opening request to URL: " + url)
-    req = Request(url, data=request_data, headers=headers)
-    handler = urlopen(req)
-    print("Loading response")
-    response = handler.readall().decode('utf-8')
-    response_json = json.loads(response)
-    print("Loaded response: {!r}".format(response_json))
-    return response_json
-
 
 @app.route('/v1/match', methods=['POST'])
 @consumes(API_MIME_TYPE, 'application/json')
