@@ -40,6 +40,8 @@ def authenticate_request(request):
     if not server:
         raise InvalidXAuthToken()
 
+    return server
+
 
 @app.route('/v1/match', methods=['POST'])
 @consumes(API_MIME_TYPE, 'application/json')
