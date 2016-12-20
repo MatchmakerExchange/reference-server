@@ -65,18 +65,18 @@ class ESIndex:
         if self.exists():
             return self._db.delete(index=self._name, doc_type=self._doc_type, id=id)
 
-    def refresh(self):
+    def refresh(self, **kwargs):
         if self.exists():
-            return self._db.indices.refresh(index=self._name)
+            return self._db.indices.refresh(index=self._name, **kwargs)
 
     def count(self):
         if self.exists():
             return self._db.count(index=self._name, doc_type=self._doc_type)
 
-    def bulk(self, data, refresh=True, request_timeout=60, **args):
+    def bulk(self, data, refresh=True, request_timeout=60, **kwargs):
         # Ensure the index exists
         self.ensure_exists()
-        self._db.bulk(data, index=self._name, doc_type=self._doc_type)
+        self._db.bulk(data, index=self._name, doc_type=self._doc_type, request_timeout=request_timeout, **kwargs)
         if refresh:
             self.refresh()
 
@@ -330,7 +330,32 @@ class VocabularyManager:
 
         return index
 
-    def index_file(self, index_name, filename, Parser):
+    def index_terms(self, index, terms, **kwargs):
+        commands = []
+        for term in terms:
+            id = term['id']
+            command = [
+                {'index': {'_id': id}},
+                term,
+            ]
+            commands.extend(command)
+
+        if commands:
+            data = ''.join([json.dumps(command) + '\n' for command in commands])
+            index.bulk(data, **kwargs)
+
+    def iter_batches(self, iterator, batch_size):
+        batch = []
+        for item in iterator:
+            batch.append(item)
+            if len(batch) >= batch_size:
+                yield batch
+                batch = []
+
+        if batch:
+            yield batch
+
+    def index_file(self, index_name, filename, Parser, batch_size=1000):
         """Index terms from the given file
 
         :param index_name: the name of the index
@@ -341,21 +366,8 @@ class VocabularyManager:
 
         index = self.get_index(index_name)
         logger.info("Parsing vocabulary from: {!r}".format(filename))
-        commands = []
-        for term in parser:
-            id = term['id']
-            command = [
-                {'index': {'_id': id}},
-                term,
-            ]
-            commands.extend(command)
-
-        data = ''.join([json.dumps(command) + '\n' for command in commands])
-
-        index.bulk(data)
-
-        n = index.count()
-        logger.info('Index now contains {} terms'.format(n))
+        for batch in self.iter_batches(parser, batch_size=batch_size):
+            self.index_terms(index, batch, refresh=False)
 
     def index_hpo(self, filename, index='hpo'):
         return self.index_file(index_name=index, filename=filename, Parser=OBOParser)
