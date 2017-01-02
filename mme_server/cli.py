@@ -10,6 +10,7 @@ import unittest
 
 from binascii import hexlify
 
+from .auth import get_server_manager
 from .compat import urlretrieve
 from .models import get_backend
 from .server import app
@@ -77,8 +78,8 @@ def fetch_resource(filename, url):
 
 def list_servers():
     with app.app_context():
-        backend = get_backend()
-        response = backend.servers.list()
+        servers = get_server_manager()
+        response = servers.list()
         # print header
         fields = response['fields']
         print('\t'.join(fields))
@@ -95,17 +96,17 @@ def add_server(id, direction, key=None, label=None, base_url=None):
         raise Exception('--base-url must be specified for outgoing servers')
 
     with app.app_context():
-        backend = get_backend()
+        servers = get_server_manager()
         # Generate a random key if one was not provided
         if key is None:
             key = hexlify(os.urandom(30)).decode()
-        backend.servers.add(server_id=id, server_key=key, direction=direction, server_label=label, base_url=base_url)
+        servers.add(server_id=id, server_key=key, direction=direction, server_label=label, base_url=base_url)
 
 
 def remove_server(id, direction):
     with app.app_context():
-        backend = get_backend()
-        backend.servers.remove(server_id=id, direction=direction)
+        servers = get_server_manager()
+        servers.remove(server_id=id, direction=direction)
 
 
 def run_tests():

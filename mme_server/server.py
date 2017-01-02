@@ -15,7 +15,7 @@ from collections import defaultdict
 from werkzeug.exceptions import BadRequest
 
 from .compat import urlopen, Request
-from .decorators import auth_token_required
+from .auth import auth_token_required
 from .models import MatchRequest, get_backend
 from .schemas import validate_request, validate_response, ValidationError
 
