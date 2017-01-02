@@ -19,9 +19,12 @@ class Feature:
 
         # Normalize phenotype term
         term = backend.vocabularies.get_term(id=self.data['id'])
-        self.data['id'] = term['id']
-        self.data['label'] = term['name']
-        self.phenotypes = term['term_category']
+        if term:
+            self.data['id'] = term['id']
+            self.data['label'] = term['name']
+            self.phenotypes = term['term_category']
+        else:
+            self.phenotypes = []
 
         # Normalize age of onset
         term_id = self.data.get('ageOfOnset')
@@ -46,14 +49,14 @@ class Feature:
 class Gene:
     def __init__(self, data):
         self.data = deepcopy(data)
-        self.term = None
-        gene_id = data.get('id')
+        gene_id = self.data.get('id')
         if gene_id:
             # Normalize gene id
             backend = get_backend()
-            self.term = backend.vocabularies.get_term(id=gene_id)
-            self.data['id'] = self.term['id']
-            self.data['label'] = self.term['name']
+            term = backend.vocabularies.get_term(id=gene_id)
+            if term:
+                self.data['id'] = term['id']
+                self.data['label'] = term['name']
 
     def get_id(self):
         return self.data.get('id')
