@@ -252,10 +252,10 @@ class FlaskTests(unittest.TestCase):
 
 class EndToEndTests(unittest.TestCase):
     def setUp(self):
-        from mme_server.cli import add_server
+        from mme_server.cli import main
         self.auth_token = 'mysecretauthtoken'
         self.test_server_id = 'test_server_{}'.format(randint(0, 1000000))
-        add_server(self.test_server_id, 'in', key=self.auth_token)
+        main(['clients', 'add', self.test_server_id, '--key={}'.format(self.auth_token)])
 
         self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.content_type_header = ('Content-Type', 'application/json')
@@ -267,8 +267,8 @@ class EndToEndTests(unittest.TestCase):
         ]
 
     def tearDown(self):
-        from mme_server.cli import remove_server
-        remove_server(self.test_server_id, 'in')
+        from mme_server.cli import main
+        main(['clients', 'rm', self.test_server_id])
 
     def test_query(self):
         from mme_server.server import app
