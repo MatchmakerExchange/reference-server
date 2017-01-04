@@ -7,18 +7,15 @@ from __future__ import with_statement, division, unicode_literals
 
 from copy import deepcopy
 
-import flask
-
-from .datastore import DatastoreConnection
-
+from .backend import get_backend
 
 class Feature:
     def __init__(self, data):
         self.data = deepcopy(data)
         backend = get_backend()
-
+        vocabularies = backend.get_manager('vocabularies')
         # Normalize phenotype term
-        term = backend.vocabularies.get_term(id=self.data['id'])
+        term = vocabularies.get_term(id=self.data['id'])
         if term:
             self.data['id'] = term['id']
             self.data['label'] = term['name']
@@ -29,7 +26,7 @@ class Feature:
         # Normalize age of onset
         term_id = self.data.get('ageOfOnset')
         if term_id:
-            term = backend.vocabularies.get_term(id=term_id)
+            term = vocabularies.get_term(id=term_id)
             self.data['ageOfOnset'] = term['id']
 
         # Normalize observed
@@ -53,7 +50,8 @@ class Gene:
         if gene_id:
             # Normalize gene id
             backend = get_backend()
-            term = backend.vocabularies.get_term(id=gene_id)
+            vocabularies = backend.get_manager('vocabularies')
+            term = vocabularies.get_term(id=gene_id)
             if term:
                 self.data['id'] = term['id']
                 self.data['label'] = term['name']
@@ -177,10 +175,10 @@ class MatchRequest:
 
     def match(self, n=5):
         backend = get_backend()
-
+        patients = backend.get_manager('patients')
         phenotypes = self.patient.phenotypes
         genes = self.patient.genes
-        hits = backend.patients.match(phenotypes, genes)
+        hits = patients.match(phenotypes, genes)
 
         matches = []
         for hit in hits[:n]:
@@ -245,11 +243,3 @@ class MatchResponse:
 
     def to_api(self):
         return self.data
-
-
-def get_backend():
-    backend = getattr(flask.g, '_mme_backend', None)
-    if backend is None:
-        backend = flask.g._mme_backend = DatastoreConnection()
-
-    return backend

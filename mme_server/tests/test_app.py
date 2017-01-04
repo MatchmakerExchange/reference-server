@@ -8,7 +8,6 @@ from random import randint
 
 from elasticsearch import Elasticsearch
 
-from mme_server.datastore import DatastoreConnection
 from mme_server.schemas import validate_request, validate_response, ValidationError
 
 EXAMPLE_REQUEST = {
@@ -75,7 +74,7 @@ class ElasticSearchTests(TestCase):
         self.assertCountEqual(record['_source']['gene'], ['ENSG00000151092'])  # NGLY1
 
     def test_hpo_indexed(self):
-        term = self.es.get(index='hpo', id='HP:0000252')
+        term = self.es.get(index='vocabularies', doc_type='hpo', id='HP:0000252')
         self.assertTrue(term['found'])
         doc = term['_source']
         self.assertEqual(doc['name'], 'Microcephaly')
@@ -137,11 +136,15 @@ class ElasticSearchTests(TestCase):
 class DatastoreTests(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = DatastoreConnection()
+        from mme_server.server import app
+        from mme_server.backend import get_backend
+        with app.app_context():
+            cls.backend = get_backend()
+            cls.vocabularies = cls.backend.get_manager('vocabularies')
 
     def test_get_term(self):
         # Lookup term using alias
-        term = self.backend.vocabularies.get_term(id='HP:0001366')
+        term = self.vocabularies.get_term(id='HP:0001366')
 
         self.assertEqual(term['id'], 'HP:0000252')
         self.assertEqual(term['name'], 'Microcephaly')

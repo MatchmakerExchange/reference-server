@@ -16,7 +16,7 @@ from werkzeug.exceptions import BadRequest
 
 from .compat import urlopen, Request
 from .auth import auth_token_required
-from .models import MatchRequest, get_backend
+from .models import MatchRequest
 from .schemas import validate_request, validate_response, ValidationError
 
 

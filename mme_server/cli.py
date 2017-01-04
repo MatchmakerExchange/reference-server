@@ -10,9 +10,8 @@ import unittest
 
 from binascii import hexlify
 
-from .auth import get_server_manager
+from .backend import get_backend
 from .compat import urlretrieve
-from .models import get_backend
 from .server import app
 
 
@@ -59,10 +58,12 @@ def index_file(index, filename, url):
 
     with app.app_context():
         backend = get_backend()
+        patients = backend.get_manager('patients')
+        vocabularies = backend.get_manager('vocabularies')
         index_funcs = {
-            'hpo': backend.vocabularies.index_hpo,
-            'genes': backend.vocabularies.index_genes,
-            'patients': backend.patients.index_file,
+            'hpo': vocabularies.index_hpo,
+            'genes': vocabularies.index_genes,
+            'patients': patients.index_file,
         }
         index_funcs[index](filename=filename)
 
@@ -76,10 +77,11 @@ def fetch_resource(filename, url):
         logger.info('Saved file to: {}'.format(filename))
 
 
-def list_servers():
+def list_servers(direction='out'):
     with app.app_context():
-        servers = get_server_manager()
-        response = servers.list()
+        backend = get_backend()
+        servers = backend.get_manager('servers')
+        response = servers.list(direction=direction)
         # print header
         fields = response['fields']
         print('\t'.join(fields))
@@ -87,8 +89,10 @@ def list_servers():
         for server in response.get('rows', []):
             print('\t'.join([repr(server[field]) for field in fields]))
 
+def list_clients():
+    return list_servers(direction='in')
 
-def add_server(id, direction, key=None, label=None, base_url=None):
+def add_server(id, direction='out', key=None, label=None, base_url=None):
     if not label:
         label = id
 
@@ -96,17 +100,24 @@ def add_server(id, direction, key=None, label=None, base_url=None):
         raise Exception('--base-url must be specified for outgoing servers')
 
     with app.app_context():
-        servers = get_server_manager()
+        backend = get_backend()
+        servers = backend.get_manager('servers')
         # Generate a random key if one was not provided
         if key is None:
             key = hexlify(os.urandom(30)).decode()
         servers.add(server_id=id, server_key=key, direction=direction, server_label=label, base_url=base_url)
 
+def add_client(id, key=None, label=None):
+    add_server(id, 'in', key=key, label=label)
 
-def remove_server(id, direction):
+def remove_server(id, direction='out'):
     with app.app_context():
-        servers = get_server_manager()
+        backend = get_backend()
+        servers = backend.get_manager('servers')
         servers.remove(server_id=id, direction=direction)
+
+def remove_client(id):
+    remove_server(id, direction='in')
 
 
 def run_tests():
@@ -114,26 +125,35 @@ def run_tests():
     unittest.TextTestRunner().run(suite)
 
 
-def add_auth_parser(parser):
-    auth_parser = parser.add_parser('auth', description="Authorization sub-commands")
-    subparsers = auth_parser.add_subparsers(title='subcommands')
-    subparser = subparsers.add_parser('add', description="Add server authorization")
-    subparser.add_argument("id", help="A unique server identifier")
-    subparser.add_argument("direction", choices=["in", "out"],
-        help="Direction of server authorization, 'in': the other server can send requests, 'out': this server can send requests")
-    subparser.add_argument("--key", help="The secret key used to authenticate requests to/from the server (default: randomly generate a secure key)")
-    subparser.add_argument("--label", help="The display name for the server ")
-    subparser.add_argument("--base-url", dest="base_url", help="The base URL for sending API requests to the other server (e.g., <base-url>/match should be a valid endpoint). Must be specified for outgoing requests")
-    subparser.set_defaults(function=add_server)
+def add_server_subcommands(parser, direction):
+    """Add subparser for incoming or outgoing servers
 
-    subparser = subparsers.add_parser('rm', description="Remove server authorization")
-    subparser.add_argument("id", help="Server identifier")
-    subparser.add_argument("direction", choices=["in", "out"],
-        help="Direction of server authorization, 'in': the other server can send requests, 'out': this server can send requests")
-    subparser.set_defaults(function=remove_server)
+    direction - 'in': incoming servers, 'out': outgoing servers
+    """
+    server_type = 'client' if direction == 'in' else 'server'
+    subparsers = parser.add_subparsers(title='subcommands')
+    subparser = subparsers.add_parser('add', description="Add {} authorization".format(server_type))
+    subparser.add_argument("id", help="A unique {} identifier".format(server_type))
+    subparser.add_argument("--key", help="The secret key used to authenticate requests to/from the {} (default: randomly generate a secure key)".format(server_type))
+    subparser.add_argument("--label", help="The display name for the {}".format(server_type))
+    if server_type == 'server':
+        subparser.add_argument("--base-url", dest="base_url", help="The base URL for sending API requests to the server (e.g., <base-url>/match should be a valid endpoint). Must be specified for outgoing requests")
+        subparser.set_defaults(function=add_server)
+    else:
+        subparser.set_defaults(function=add_client)
 
-    subparser = subparsers.add_parser('list', description="List all existing server authorizations")
-    subparser.set_defaults(function=list_servers)
+    subparser = subparsers.add_parser('rm', description="Remove {} authorization".format(server_type))
+    subparser.add_argument("id", help="The {} identifier".format(server_type))
+    if server_type == 'server':
+        subparser.set_defaults(function=remove_server)
+    else:
+        subparser.set_defaults(function=remove_client)
+
+    subparser = subparsers.add_parser('list', description="List {} authorizations".format(server_type))
+    if server_type == 'server':
+        subparser.set_defaults(function=list_servers)
+    else:
+        subparser.set_defaults(function=list_clients)
 
 
 def parse_args(args):
@@ -174,7 +194,11 @@ def parse_args(args):
                            help="The host the server will listen to (0.0.0.0 to listen globally; 127.0.0.1 to listen locally; default: %(default)s)")
     subparser.set_defaults(function=app.run)
 
-    add_auth_parser(subparsers)
+    subparser = subparsers.add_parser('servers', description="Server authorization sub-commands")
+    add_server_subcommands(subparser, direction='out')
+
+    subparser = subparsers.add_parser('clients', description="Client authorization sub-commands")
+    add_server_subcommands(subparser, direction='in')
 
     subparser = subparsers.add_parser('test', description="Run tests")
     subparser.set_defaults(function=run_tests)
