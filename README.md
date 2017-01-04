@@ -13,7 +13,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 ## Dependencies
 
 - Python 2.7 or 3.3+
-- ElasticSearch 1.7 (to match Travis-CI)
+- ElasticSearch 2.x
 
 
 ## Quickstart
@@ -43,7 +43,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
     mme-server quickstart
     ```
 
-1. Run tests:
+1. Run tests (must run quickstart first):
 
     ```sh
     mme-server test
@@ -52,7 +52,7 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 1. Authorize an incoming server:
 
     ```sh
-    mme-server auth add client_server in --label "My Client" --key "<CLIENT_AUTH_TOKEN>"
+    mme-server clients add myclient --label "My Client" --key "<CLIENT_AUTH_TOKEN>"
     ```
 
     Leave off the `--key` option to have a secure key randomly generated for you.
@@ -129,18 +129,21 @@ Custom patient data can be indexed by the server in two ways (if a patient 'id' 
 1. Batch index from the Python interface:
 
     ```py
-    >>> from mme_server.models import DatastoreConnection
-    >>> db = DatastoreConnection()
-    >>> db.patients.index('/path/to/patients.json')
+    >>> from mme_server.backend import get_backend
+    >>> db = get_backend()
+    >>> patients = db.get_manager('patients')
+    >>> patients.index('/path/to/patients.json')
     ```
 
 1. Single patient index the Python interface:
 
     ```py
-    >>> from mme_server.models import Patient, DatastoreConnection
-    >>> db = DatastoreConnection()
+    >>> from mme_server.backend import get_backend
+    >>> db = get_backend()
+    >>> patients = db.get_manager('patients')
+    >>> from mme_server.models import Patient
     >>> patient = Patient.from_api({...})
-    >>> db.patients.index_patient(patient)
+    >>> patients.index_patient(patient)
     ```
 
 
@@ -154,8 +157,3 @@ If you have any questions, feel free to post an issue on GitHub.
 This repository is managed by the Matchmaker Exchange technical team. You can reach us via GitHub or by [email](mailto:api@matchmakerexchange.org).
 
 Contributions are most welcome! Post an issue, submit a bugfix, or just try it out. We hope you find it useful.
-
-
-## Implementations
-
-We don't know of any organizations using this code in a production setting just yet. If you are, please let us know! We'd love to list you here.

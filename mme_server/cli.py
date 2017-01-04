@@ -134,10 +134,12 @@ def add_server_subcommands(parser, direction):
     subparsers = parser.add_subparsers(title='subcommands')
     subparser = subparsers.add_parser('add', description="Add {} authorization".format(server_type))
     subparser.add_argument("id", help="A unique {} identifier".format(server_type))
+    if server_type == 'server':
+        subparser.add_argument("base_url", help="The base HTTPS URL for sending API requests to the server (e.g., <base-url>/match should be a valid endpoint).")
+
     subparser.add_argument("--key", help="The secret key used to authenticate requests to/from the {} (default: randomly generate a secure key)".format(server_type))
     subparser.add_argument("--label", help="The display name for the {}".format(server_type))
     if server_type == 'server':
-        subparser.add_argument("--base-url", dest="base_url", help="The base URL for sending API requests to the server (e.g., <base-url>/match should be a valid endpoint). Must be specified for outgoing requests")
         subparser.set_defaults(function=add_server)
     else:
         subparser.set_defaults(function=add_client)
