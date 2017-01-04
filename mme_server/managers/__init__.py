@@ -23,7 +23,7 @@ class Managers:
     @classmethod
     def add_manager(cls, name, Manager):
         # name = Manager.NAME
-        logger.warning('Registering manager: {} -> {}'.format(name, Manager))
+        logger.debug('Registering manager: {} -> {}'.format(name, Manager))
         assert name, "Manager name is required"
         assert name not in cls._managers, "Manager name already registered: {}".format(name)
         cls._managers[name] = Manager
