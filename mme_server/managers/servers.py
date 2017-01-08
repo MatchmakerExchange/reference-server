@@ -64,11 +64,12 @@ class ServerManager(BaseManager):
         assert server_id and server_key and direction in ['in', 'out']
 
         # Normalize url
-        parsed_url = urlsplit(base_url)
-        base_url = parsed_url.geturl()
-        if base_url and not parsed_url.scheme == 'https' and not parsed_url.hostname == 'localhost':
-            logger.error('base URL must start with "https://"')
-            return
+        if base_url:
+            parsed_url = urlsplit(base_url)
+            base_url = parsed_url.geturl()
+            if not parsed_url.scheme == 'https' and not parsed_url.hostname == 'localhost':
+                logger.error('base URL must start with "https://"')
+                return
 
         self.ensure_index_exists()
 
