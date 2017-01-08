@@ -11,8 +11,9 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 
 
 ## Dependencies
+
 - Python 2.7 or 3.3+
-- ElasticSearch
+- ElasticSearch 2.x
 
 
 ## Quickstart
@@ -42,11 +43,19 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
     mme-server quickstart
     ```
 
-1. Run tests:
+1. Run tests (must run quickstart first):
 
     ```sh
     mme-server test
     ```
+
+1. Authorize an incoming server:
+
+    ```sh
+    mme-server clients add myclient --label "My Client" --key "<CLIENT_AUTH_TOKEN>"
+    ```
+
+    Leave off the `--key` option to have a secure key randomly generated for you.
 
 1. Start up MME reference server:
 
@@ -59,14 +68,17 @@ This code is intended to be illustrative and is **not** guaranteed to perform we
 1. Try it out:
 
     ```sh
-    curl -XPOST -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
-         -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
-         -d '{"patient":{
+    curl -XPOST \
+      -H 'X-Auth-Token: <CLIENT_AUTH_TOKEN>' \
+      -H 'Content-Type: application/vnd.ga4gh.matchmaker.v1.0+json' \
+      -H 'Accept: application/vnd.ga4gh.matchmaker.v1.0+json' \
+      -d '{"patient":{
         "id":"1",
         "contact": {"name":"Jane Doe", "href":"mailto:jdoe@example.edu"},
         "features":[{"id":"HP:0000522"}],
-        "genomicFeatures":[{"gene":{"id":"NGLY1"}}]
-      }}' localhost:8000/match
+        "genomicFeatures":[{"gene":{"id":"NGLY1"}}],
+        "test": true
+      }}' localhost:8000/v1/match
     ```
 
 ## Installation
@@ -93,14 +105,14 @@ source .virtualenv/bin/activate
 First, download elasticsearch:
 
 ```sh
-wget https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.1.1/elasticsearch-2.1.1.tar.gz
-tar -xzf elasticsearch-2.1.1.tar.gz
+wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.6.zip
+unzip elasticsearch-1.7.6.zip
 ```
 
 Then, start up a local elasticsearch cluster to serve as our database (`-Des.path.data=data` puts the elasticsearch indices in a subdirectory called `data`):
 
 ```sh
-./elasticsearch-2.1.1/bin/elasticsearch -Des.path.data=data
+./elasticsearch-1.7.6/bin/elasticsearch -Des.path.data=data
 ```
 
 
@@ -117,18 +129,21 @@ Custom patient data can be indexed by the server in two ways (if a patient 'id' 
 1. Batch index from the Python interface:
 
     ```py
-    >>> from mme_server.models import DatastoreConnection
-    >>> db = DatastoreConnection()
-    >>> db.patients.index('/path/to/patients.json')
+    >>> from mme_server.backend import get_backend
+    >>> db = get_backend()
+    >>> patients = db.get_manager('patients')
+    >>> patients.index('/path/to/patients.json')
     ```
 
 1. Single patient index the Python interface:
 
     ```py
-    >>> from mme_server.models import Patient, DatastoreConnection
-    >>> db = DatastoreConnection()
+    >>> from mme_server.backend import get_backend
+    >>> db = get_backend()
+    >>> patients = db.get_manager('patients')
+    >>> from mme_server.models import Patient
     >>> patient = Patient.from_api({...})
-    >>> db.patients.index_patient(patient)
+    >>> patients.index_patient(patient)
     ```
 
 
@@ -142,8 +157,3 @@ If you have any questions, feel free to post an issue on GitHub.
 This repository is managed by the Matchmaker Exchange technical team. You can reach us via GitHub or by [email](mailto:api@matchmakerexchange.org).
 
 Contributions are most welcome! Post an issue, submit a bugfix, or just try it out. We hope you find it useful.
-
-
-## Implementations
-
-We don't know of any organizations using this code in a production setting just yet. If you are, please let us know! We'd love to list you here.

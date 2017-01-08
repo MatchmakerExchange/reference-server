@@ -7,26 +7,26 @@ from __future__ import with_statement, division, unicode_literals
 
 from copy import deepcopy
 
-import flask
-
-from .datastore import DatastoreConnection
-
+from .backend import get_backend
 
 class Feature:
     def __init__(self, data):
         self.data = deepcopy(data)
         backend = get_backend()
-
+        vocabularies = backend.get_manager('vocabularies')
         # Normalize phenotype term
-        term = backend.vocabularies.get_term(id=self.data['id'])
-        self.data['id'] = term['id']
-        self.data['label'] = term['name']
-        self.phenotypes = term['term_category']
+        term = vocabularies.get_term(id=self.data['id'])
+        if term:
+            self.data['id'] = term['id']
+            self.data['label'] = term['name']
+            self.phenotypes = term['term_category']
+        else:
+            self.phenotypes = []
 
         # Normalize age of onset
         term_id = self.data.get('ageOfOnset')
         if term_id:
-            term = backend.vocabularies.get_term(id=term_id)
+            term = vocabularies.get_term(id=term_id)
             self.data['ageOfOnset'] = term['id']
 
         # Normalize observed
@@ -46,14 +46,15 @@ class Feature:
 class Gene:
     def __init__(self, data):
         self.data = deepcopy(data)
-        self.term = None
-        gene_id = data.get('id')
+        gene_id = self.data.get('id')
         if gene_id:
             # Normalize gene id
             backend = get_backend()
-            self.term = backend.vocabularies.get_term(id=gene_id)
-            self.data['id'] = self.term['id']
-            self.data['label'] = self.term['name']
+            vocabularies = backend.get_manager('vocabularies')
+            term = vocabularies.get_term(id=gene_id)
+            if term:
+                self.data['id'] = term['id']
+                self.data['label'] = term['name']
 
     def get_id(self):
         return self.data.get('id')
@@ -94,11 +95,11 @@ class Patient:
             genes = set()
 
         # Set of all present and implied features
-        self.phenotypes = phenotypes
+        self.phenotypes = set(phenotypes)
         # Set of all candidate gene ids
-        self.genes = genes
+        self.genes = set(genes)
         # API representation of the patient
-        self.data = data
+        self.data = dict(data)
 
     @classmethod
     def from_api(cls, data):
@@ -135,7 +136,8 @@ class Patient:
         return cls(data, phenotypes, genes)
 
     @classmethod
-    def from_index(cls, doc):
+    def from_index(cls, hit):
+        doc = hit.to_dict()  # Convert from elasticsearch_dsl.AttrDict
         obj = cls()
         obj.phenotypes = set(doc['phenotype'])
         obj.genes = set(doc['gene'])
@@ -152,7 +154,7 @@ class Patient:
         doc = {
             'phenotype': sorted(self.phenotypes),
             'gene': sorted(self.genes),
-            'doc': self.data,
+            'doc': dict(self.data),
         }
         return doc
 
@@ -166,16 +168,21 @@ class MatchRequest:
         patient = Patient.from_api(request['patient'])
         return cls(patient)
 
+    def to_api(self):
+        return {
+            'patient': self.patient.to_api()
+        }
+
     def match(self, n=5):
         backend = get_backend()
-
+        patients = backend.get_manager('patients')
         phenotypes = self.patient.phenotypes
         genes = self.patient.genes
-        hits = backend.patients.match(phenotypes, genes, n=n)
+        hits = patients.match(phenotypes, genes)
 
         matches = []
-        for hit in hits:
-            match = MatchResult(self.patient, hit)
+        for hit in hits[:n]:
+            match = MatchResult.from_index(hit)
             matches.append(match)
 
         matches.sort(reverse=True)
@@ -184,26 +191,33 @@ class MatchRequest:
 
 class MatchResult:
     """A simple match view that uses the ElasticSearch score directly"""
-    def __init__(self, query_patient, hit):
-        self.query_patient = query_patient
-
+    def __init__(self, patient, score):
         # Parse the patient from the matched doc
-        doc = hit['_source']
-        self.match_patient = Patient.from_index(doc)
+        self.patient = patient
 
         # Score the match
-        self.hit = hit
-        self.score = self.get_score()
+        self.score = score
 
         # Serialize for API
         self.data = {
             'score': {'patient': self.score},
-            'patient': self.match_patient.to_api(),
+            'patient': self.patient.to_api(),
         }
 
-    def get_score(self):
+    @classmethod
+    def from_api(cls, request):
+        patient = Patient.from_api(request['patient'])
+        score = float(request['score']['patient'])
+        return cls(patient, score)
+
+    @classmethod
+    def from_index(cls, hit):
+        # Parse the patient from the matched doc
+        patient = Patient.from_index(hit)
+
         # Use the ElasticSearch TF/IDF score, normalized to [0, 1]
-        return 1 - 1 / (1 + self.hit['_score'])
+        score = 1 - 1 / (1 + float(hit.meta.score))
+        return cls(patient, score)
 
     def to_api(self):
         return self.data
@@ -219,13 +233,13 @@ class MatchResponse:
             'results': [match.to_api() for match in matches],
         }
 
+    @classmethod
+    def from_api(cls, request):
+        matches = []
+        for result in request['results']:
+            matches.append(MatchResult.from_api(result))
+
+        return cls(matches)
+
     def to_api(self):
         return self.data
-
-
-def get_backend():
-    backend = getattr(flask.g, '_mme_backend', None)
-    if backend is None:
-        backend = flask.g._mme_backend = DatastoreConnection()
-
-    return backend

@@ -1,25 +1,44 @@
 # After changing this file, check it on:
 #   http://lint.travis-ci.org/
 language: python
+
 python:
   - "2.7"
   - "3.3"
   - "3.4"
   - "3.5"
+
+sudo: false
+
+cache:
+  apt: true
+
+addons:
+  apt:
+    sources:
+      - elasticsearch-2.x
+    packages:
+      - elasticsearch
+
+services:
+  - elasticsearch
+
 install:
   - pip install -e .
   - mme-server quickstart
+
 script:
   # Test via module runner
   - python -m mme_server test
   # Test via setup.py (with environment variable to also test quickstart)
   - MME_TEST_QUICKSTART=1 coverage run --source=mme_server setup.py test
-services:
-  - elasticsearch
+
 before_script:
   # Delay for elasticsearch to start
   - sleep 10
+
 before_install:
   - pip install coveralls
+
 after_success:
   - coveralls

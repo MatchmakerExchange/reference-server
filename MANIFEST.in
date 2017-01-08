@@ -3,3 +3,4 @@ include LICENSE.txt
 include README.md
 include MANIFEST.in
 recursive-include mme_server/schemas *.json
+recursive-include mme_server/templates *.html

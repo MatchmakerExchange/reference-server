@@ -4,14 +4,12 @@ import json
 
 from pkgutil import get_data
 
-from jsonschema import validate, RefResolver, FormatChecker, ValidationError as BaseValidationError
+from jsonschema import validate, RefResolver, FormatChecker, ValidationError
 
 
 SCHEMA_FILE = 'api.json'
 REQUEST_SCHEMA = '#/definitions/request'
 RESPONSE_SCHEMA = '#/definitions/response'
-ValidationError = BaseValidationError
-
 
 def load_schema():
     # Read resource from same directory of (potentially-zipped) module
@@ -33,4 +31,3 @@ def validate_request(data):
 
 def validate_response(data):
     validate_subschema(data, RESPONSE_SCHEMA)
-

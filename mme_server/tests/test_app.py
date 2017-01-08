@@ -4,10 +4,10 @@ import unittest
 
 from copy import deepcopy
 from unittest import TestCase
+from random import randint
 
 from elasticsearch import Elasticsearch
 
-from mme_server.datastore import DatastoreConnection
 from mme_server.schemas import validate_request, validate_response, ValidationError
 
 EXAMPLE_REQUEST = {
@@ -74,7 +74,7 @@ class ElasticSearchTests(TestCase):
         self.assertCountEqual(record['_source']['gene'], ['ENSG00000151092'])  # NGLY1
 
     def test_hpo_indexed(self):
-        term = self.es.get(index='hpo', id='HP:0000252')
+        term = self.es.get(index='vocabularies', doc_type='hpo', id='HP:0000252')
         self.assertTrue(term['found'])
         doc = term['_source']
         self.assertEqual(doc['name'], 'Microcephaly')
@@ -136,11 +136,15 @@ class ElasticSearchTests(TestCase):
 class DatastoreTests(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.backend = DatastoreConnection()
+        from mme_server.server import app
+        from mme_server.backend import get_backend
+        with app.app_context():
+            cls.backend = get_backend()
+            cls.vocabularies = cls.backend.get_manager('vocabularies')
 
     def test_get_term(self):
         # Lookup term using alias
-        term = self.backend.vocabularies.get_term(id='HP:0001366')
+        term = self.vocabularies.get_term(id='HP:0001366')
 
         self.assertEqual(term['id'], 'HP:0000252')
         self.assertEqual(term['name'], 'Microcephaly')
@@ -150,8 +154,6 @@ class DatastoreTests(TestCase):
 
 class MatchRequestTests(TestCase):
     def setUp(self):
-        from mme_server.server import app
-        self.app = app
         self.request = deepcopy(EXAMPLE_REQUEST)
 
     def assertValidRequest(self, data):
@@ -184,28 +186,42 @@ class MatchRequestTests(TestCase):
     def test_query_schema_complete(self):
         self.assertValidRequest(self.request)
 
-    def test_query_schema_extra_fields_must_start_with_underscore(self):
+    def test_query_schema_extra_fields_allowed(self):
         self.request['patient']['_foo'] = 'bar'
         self.assertValidRequest(self.request)
         self.request['patient']['foo'] = 'bar'
-        self.assertNotValidRequest(self.request)
+        self.assertValidRequest(self.request)
 
 
 class FlaskTests(unittest.TestCase):
     def setUp(self):
         from mme_server.server import app
+        from mme_server.cli import add_server
 
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
+        self.auth_token = 'mysecretauthtoken'
+        self.test_server_id = 'test_server_{}'.format(randint(0, 1000000))
+        add_server(self.test_server_id, 'in', key=self.auth_token)
+
         self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.content_type_header = ('Content-Type', 'application/json')
-        self.headers = [self.accept_header, self.content_type_header]
+        self.auth_token_header = ('X-Auth-Token', self.auth_token)
+        self.headers = [
+            self.accept_header,
+            self.content_type_header,
+            self.auth_token_header,
+        ]
+
+    def tearDown(self):
+        from mme_server.cli import remove_server
+        remove_server(self.test_server_id, 'in')
 
     def assertValidResponse(self, data):
         validate_response(data)
 
     def test_match_request(self):
-        response = self.client.post('/match', data=self.data, headers=self.headers)
+        response = self.client.post('/v1/match', data=self.data, headers=self.headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         self.assertValidResponse(json.loads(response.get_data(as_text=True)))
@@ -213,31 +229,52 @@ class FlaskTests(unittest.TestCase):
     def test_accept_header_required(self):
         headers = self.headers
         headers.remove(self.accept_header)
-        response = self.client.post('/match', data=self.data, headers=headers)
+        response = self.client.post('/v1/match', data=self.data, headers=headers)
         self.assertEqual(response.status_code, 406)
 
     def test_content_type_required(self):
         headers = self.headers
         headers.remove(self.content_type_header)
-        response = self.client.post('/match', data=self.data, headers=headers)
+        response = self.client.post('/v1/match', data=self.data, headers=headers)
         self.assertEqual(response.status_code, 415)
 
     def test_invalid_query(self):
-        response = self.client.post('/match', data='{}', headers=self.headers)
+        response = self.client.post('/v1/match', data='{}', headers=self.headers)
         self.assertEqual(response.status_code, 422)
+        self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
+
+    def test_unauthenticated(self):
+        self.headers.remove(self.auth_token_header)
+        response = self.client.post('/v1/match', data='{}', headers=self.headers)
+        self.assertEqual(response.status_code, 401)
         self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
 
 
 class EndToEndTests(unittest.TestCase):
+    def setUp(self):
+        from mme_server.cli import main
+        self.auth_token = 'mysecretauthtoken'
+        self.test_server_id = 'test_server_{}'.format(randint(0, 1000000))
+        main(['clients', 'add', self.test_server_id, '--key={}'.format(self.auth_token)])
+
+        self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
+        self.content_type_header = ('Content-Type', 'application/json')
+        self.auth_token_header = ('X-Auth-Token', self.auth_token)
+        self.headers = [
+            self.accept_header,
+            self.content_type_header,
+            self.auth_token_header,
+        ]
+
+    def tearDown(self):
+        from mme_server.cli import main
+        main(['clients', 'rm', self.test_server_id])
+
     def test_query(self):
         from mme_server.server import app
         self.client = app.test_client()
         self.data = json.dumps(EXAMPLE_REQUEST)
-        self.accept_header = ('Accept', 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.content_type_header = ('Content-Type', 'application/json')
-        self.headers = [self.accept_header, self.content_type_header]
-
-        response = self.client.post('/match', data=self.data, headers=self.headers)
+        response = self.client.post('/v1/match', data=self.data, headers=self.headers)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
         response_data = json.loads(response.get_data(as_text=True))
