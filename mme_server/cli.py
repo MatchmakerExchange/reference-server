@@ -97,7 +97,7 @@ def add_server(id, direction='out', key=None, label=None, base_url=None):
         label = id
 
     if direction == 'out' and not base_url:
-        raise Exception('--base-url must be specified for outgoing servers')
+        raise Exception('base-url must be specified for outgoing servers')
 
     with app.app_context():
         backend = get_backend()

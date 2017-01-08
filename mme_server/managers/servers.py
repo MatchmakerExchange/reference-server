@@ -6,6 +6,7 @@ from __future__ import with_statement, division, unicode_literals
 import json
 import logging
 
+from ..compat import urlsplit
 from .base import BaseManager
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,10 @@ class ServerManager(BaseManager):
     def add(self, server_id, server_label, server_key, direction, base_url=None):
         assert server_id and server_key and direction in ['in', 'out']
 
-        if base_url and not base_url.startswith('https://'):
+        # Normalize url
+        parsed_url = urlsplit(base_url)
+        base_url = parsed_url.geturl()
+        if base_url and not parsed_url.scheme == 'https' and not parsed_url.hostname == 'localhost':
             logger.error('base URL must start with "https://"')
             return
 
@@ -89,7 +93,7 @@ class ServerManager(BaseManager):
                 'server_key': server_key,
             }
             if doc_type == 'server':
-                data['base_url'] = base_url,
+                data['base_url'] = base_url
 
             self.save(id=id, doc_type=doc_type, doc=data)
             logger.info("Authorized {}:\n{}".format(doc_type, json.dumps(data, indent=4, sort_keys=True)))

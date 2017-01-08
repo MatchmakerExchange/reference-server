@@ -5,7 +5,6 @@ from __future__ import with_statement, division, unicode_literals
 
 import logging
 
-# Import managers to register them
 from .patients import PatientManager
 from .servers import ServerManager
 from .vocabularies import VocabularyManager
