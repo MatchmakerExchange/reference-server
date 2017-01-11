@@ -61,7 +61,7 @@ class ServerManager(BaseManager):
     }
 
     def add(self, server_id, server_label, server_key, direction, base_url=None):
-        assert server_id and server_key and direction in ['in', 'out']
+        assert server_id and server_label and direction in ['in', 'out']
 
         # Normalize url
         if base_url:
