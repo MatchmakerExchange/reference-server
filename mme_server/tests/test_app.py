@@ -249,6 +249,10 @@ class FlaskTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertTrue(json.loads(response.get_data(as_text=True))['message'])
 
+    def test_add_server_with_blank_key(self):
+        from mme_server.cli import add_server
+        add_server(self.test_server_id, 'out', key='', base_url='https://example.com/')
+
 
 class EndToEndTests(unittest.TestCase):
     def setUp(self):
