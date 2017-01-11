@@ -77,7 +77,7 @@ class ElasticSearchTests(TestCase):
         term = self.es.get(index='vocabularies', doc_type='hpo', id='HP:0000252')
         self.assertTrue(term['found'])
         doc = term['_source']
-        self.assertEqual(doc['name'], 'Microcephaly')
+        self.assertEqual(doc['name'], ['Microcephaly'])
         self.assertAlmostEqual(len(doc['alt_id']), 4, delta=1)
         self.assertIn('small head', [term.lower() for term in doc['synonym']])
         self.assertCountEqual(doc['is_a'], ['HP:0040195', 'HP:0007364'])
@@ -147,7 +147,7 @@ class DatastoreTests(TestCase):
         term = self.vocabularies.get_term(id='HP:0001366')
 
         self.assertEqual(term['id'], 'HP:0000252')
-        self.assertEqual(term['name'], 'Microcephaly')
+        self.assertEqual(term['name'], ['Microcephaly'])
         self.assertEqual(len(term['is_a']), 2)
         self.assertAlmostEqual(len(term['term_category']), 20, delta=5)
 

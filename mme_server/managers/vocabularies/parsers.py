@@ -35,7 +35,7 @@ class OBOParser(BaseParser):
 
         for stanza in parser:
             id = str(stanza.tags['id'][0])
-            name = str(stanza.tags['name'][0])
+            name = get_tag_strings(stanza, 'name')
             alt_id = get_tag_strings(stanza, 'alt_id')
             synonym = get_tag_strings(stanza, 'synonym')
             is_a = get_tag_strings(stanza, 'is_a')

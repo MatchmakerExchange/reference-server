@@ -18,7 +18,11 @@ class Feature:
         term = vocabularies.get_term(id=self.data['id'])
         if term:
             self.data['id'] = term['id']
-            self.data['label'] = term['name']
+            # All vocabulary fields are lists
+            if term['name']:
+                name = term['name'][0]
+                self.data['label'] = name
+
             self.phenotypes = term['term_category']
         else:
             self.phenotypes = []
@@ -54,7 +58,10 @@ class Gene:
             term = vocabularies.get_term(id=gene_id)
             if term:
                 self.data['id'] = term['id']
-                self.data['label'] = term['name']
+                # All vocabulary fields are lists
+                if term['name']:
+                    name = term['name'][0]
+                    self.data['label'] = name
 
     def get_id(self):
         return self.data.get('id')
