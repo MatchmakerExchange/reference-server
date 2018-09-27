@@ -130,7 +130,7 @@ class ElasticSearchTests(TestCase):
         results = self.es.search(index='patients', body=query)
         hits = results['hits']['hits']
         # Most similar patient from test dataset
-        self.assertEqual(hits[0]['_id'], 'P0001059')
+        self.assertEqual(hits[0]['_id'], 'P0001058')
 
 
 class DatastoreTests(TestCase):
