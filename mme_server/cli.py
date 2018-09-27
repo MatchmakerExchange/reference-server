@@ -19,7 +19,7 @@ DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 8000
 
 # Matchmaker Exchange benchmark dataset of 50 patients
-TEST_DATA_URL = 'https://raw.githubusercontent.com/ga4gh/mme-apis/hotfix/v1.0b/testing/benchmark_patients.json'
+TEST_DATA_URL = 'https://raw.githubusercontent.com/ga4gh/mme-apis/1.1/testing/benchmark_patients.json'
 DEFAULT_DATA_FILENAME = 'data.json'
 
 # Human Phenotype Ontology
