@@ -18,7 +18,8 @@ addons:
     sources:
       - elasticsearch-2.x
     packages:
-      - elasticsearch
+      # Pin to specific version: https://github.com/travis-ci/travis-ci/issues/4542#issuecomment-338504466
+      - elasticsearch=2.4.6
 
 services:
   - elasticsearch
