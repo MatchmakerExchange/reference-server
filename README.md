@@ -105,8 +105,8 @@ source .virtualenv/bin/activate
 First, download elasticsearch:
 
 ```sh
-wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.7.6.zip
-unzip elasticsearch-1.7.6.zip
+wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-2.4.2.zip
+unzip elasticsearch-2.4.2.zip
 ```
 
 Then, start up a local elasticsearch cluster to serve as our database (`-Des.path.data=data` puts the elasticsearch indices in a subdirectory called `data`):
